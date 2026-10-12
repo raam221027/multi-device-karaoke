@@ -1,0 +1,15 @@
+# Each app (backend/, frontend/) has its own .gitignore; these are repo-wide.
+.env
+.env.*
+!.env.example
+node_modules/
+vendor/
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

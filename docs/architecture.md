@@ -35,6 +35,20 @@ Guests join with the room code alone, by scanning the QR code (`/join/{code}`) o
 - Optional **guest approval** (`requires_approval`).
 - **Kick** revokes the guest's token.
 
+### Room API (Phase 1)
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/rooms` | 10/min per IP | Create a room + host participant. Returns `{room, participant, token}` |
+| GET | `/api/rooms/code/{code}` | 20/min per IP (shared with join) | Preview a code: `{id, code, joinable, is_locked, requires_approval}`. 404 if unknown or closed |
+| POST | `/api/rooms/join` | 20/min per IP (shared) | `{code, display_name}` creates a guest. 404 unknown/closed, 423 locked |
+| GET | `/api/me` | token | Current participant + room (resume after reload) |
+| GET | `/api/rooms/{room}/state` | token, member of room | Room (with `version`), approved participants, `me` |
+| POST | `/api/rooms/{room}/leave` | `guest` token | Revoke this device's token |
+| POST | `/api/rooms/{room}/close` | `host` token | Close the room, bump version, revoke every token in the room |
+
+Typed codes are normalized (uppercase, spaces and dashes removed) on both client and server. Tokens expire after 24 hours. Until Phase 3, pages poll `/state` every 4 seconds.
+
 ### Display pairing
 
 The display opens `/display` and gets a single-use pairing code (expires in 5 minutes) plus a secret it keeps to itself. The host enters the code. The display polls `GET /api/pairings/{id}` with its secret and receives a token with the `display` ability.
@@ -72,7 +86,7 @@ display_pairings  id, code, secret_hash, room_id, participant_id, expires_at, pa
 ## Roadmap
 
 0. Scaffold ← *done*
-1. Rooms: create, join, close; Sanctum role tokens
+1. Rooms: create, join, close; Sanctum role tokens ← *done*
 2. Queue + idempotent advance and skip
 3. Reverb real-time + versioned refetch
 4. Display pairing + IFrame player

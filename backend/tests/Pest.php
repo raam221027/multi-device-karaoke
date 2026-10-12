@@ -41,7 +41,21 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Act as a device holding the given bearer token. The auth guards are reset
+ * first so a test can switch between several devices' tokens.
+ */
+function asDevice(string $token): Tests\TestCase
 {
-    // ..
+    app('auth')->forgetGuards();
+
+    return test()->withToken($token);
+}
+
+/** Create a participant and return [participant, plain-text token]. */
+function deviceIn(App\Models\Room $room, string $role = 'guest'): array
+{
+    $participant = App\Models\Participant::factory()->for($room)->{$role}()->create();
+
+    return [$participant, $participant->issueToken()];
 }

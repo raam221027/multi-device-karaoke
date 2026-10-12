@@ -37,7 +37,8 @@ return [
     |
     */
 
-    'guard' => ['web'],
+    // Devices authenticate with bearer tokens only; there are no web sessions.
+    'guard' => [],
 
     /*
     |--------------------------------------------------------------------------

@@ -26,5 +26,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Shared by code lookup and join: caps how fast one client can guess codes.
         RateLimiter::for('room-code', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+
+        // YouTube search.list costs 100 of the default 10,000 daily quota units.
+        RateLimiter::for('search', fn (Request $request) => Limit::perMinute(10)->by('participant:'.$request->user()?->id));
     }
 }

@@ -16,16 +16,56 @@ class RoomPolicy
             && $room->isOpen();
     }
 
+    /** Guests and the display leave; the host closes the room instead. */
     public function leave(Participant $participant, Room $room): bool
     {
         return $this->view($participant, $room)
-            && $participant->role === ParticipantRole::Guest;
+            && ! $participant->isHost();
     }
 
     public function close(Participant $participant, Room $room): bool
     {
+        return $this->manage($participant, $room);
+    }
+
+    /** Settings, guest permissions, removing guests, reordering, pause/resume. */
+    public function manage(Participant $participant, Room $room): bool
+    {
         return $this->view($participant, $room)
             && $participant->isHost()
             && $participant->tokenCan(ParticipantRole::Host->value);
+    }
+
+    /** Phones search; the display doesn't. */
+    public function search(Participant $participant, Room $room): bool
+    {
+        return $this->view($participant, $room) && ! $participant->isDisplay();
+    }
+
+    /** The host always sings; guests sing unless the host turned additions off. */
+    public function addSong(Participant $participant, Room $room): bool
+    {
+        if ($this->manage($participant, $room)) {
+            return true;
+        }
+
+        return $this->view($participant, $room)
+            && $participant->isGuest()
+            && $room->allow_song_additions
+            && $participant->can_add_songs;
+    }
+
+    public function skip(Participant $participant, Room $room): bool
+    {
+        return $this->manage($participant, $room)
+            || ($this->view($participant, $room) && $participant->isGuest() && $room->guests_can_skip);
+    }
+
+    /** Only the display reports what the player actually did. */
+    public function reportPlayback(Participant $participant, Room $room): bool
+    {
+        return $this->view($participant, $room)
+            && $participant->isDisplay()
+            && $participant->tokenCan(ParticipantRole::Display->value);
     }
 }

@@ -10,9 +10,9 @@ function Problem({ title, detail }: { title: string; detail: string }) {
     <Page>
       <Card>
         <h1 className="text-xl font-bold">{title}</h1>
-        <p className="text-slate-400">{detail}</p>
+        <p className="text-muted">{detail}</p>
       </Card>
-      <Link to="/" className="text-center text-fuchsia-400 underline">
+      <Link to="/" className="text-center text-accent">
         Back to start
       </Link>
     </Page>
@@ -43,7 +43,7 @@ export default function JoinPage() {
   if (room.isPending) {
     return (
       <Page>
-        <p className="text-center text-slate-400">Finding room {code}…</p>
+        <p className="text-center text-muted">Finding room {code}…</p>
       </Page>
     )
   }
@@ -63,13 +63,13 @@ export default function JoinPage() {
   return (
     <Page>
       <header className="space-y-1 text-center">
-        <p className="text-slate-400">Joining room</p>
-        <h1 className="font-mono text-4xl font-bold tracking-[0.3em]">{room.data.code}</h1>
+        <p className="text-muted">Joining room</p>
+        <h1 className="text-[38px] font-bold tracking-[0.08em]">{room.data.code}</h1>
       </header>
 
       <Card>
         <form onSubmit={onSubmit} className="space-y-3">
-          <label htmlFor="name" className="font-semibold">
+          <label htmlFor="name" className="text-[15px] font-semibold">
             What should we call you?
           </label>
           <TextInput

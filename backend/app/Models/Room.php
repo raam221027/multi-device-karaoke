@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use App\Enums\ParticipantRole;
+use App\Enums\PlaybackStatus;
+use App\Enums\QueueItemStatus;
 use App\Enums\RoomStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -16,9 +19,16 @@ class Room extends Model
 
     protected $fillable = [
         'code',
+        'name',
         'status',
         'is_locked',
         'requires_approval',
+        'allow_song_additions',
+        'guests_can_skip',
+        'current_queue_item_id',
+        'playback_status',
+        'paused_at',
+        'paused_seconds',
         'closed_at',
     ];
 
@@ -26,6 +36,10 @@ class Room extends Model
         'status' => 'open',
         'is_locked' => false,
         'requires_approval' => false,
+        'allow_song_additions' => true,
+        'guests_can_skip' => false,
+        'playback_status' => 'playing',
+        'paused_seconds' => 0,
         'version' => 0,
     ];
 
@@ -35,6 +49,11 @@ class Room extends Model
             'status' => RoomStatus::class,
             'is_locked' => 'boolean',
             'requires_approval' => 'boolean',
+            'allow_song_additions' => 'boolean',
+            'guests_can_skip' => 'boolean',
+            'playback_status' => PlaybackStatus::class,
+            'paused_at' => 'datetime',
+            'paused_seconds' => 'integer',
             'version' => 'integer',
             'closed_at' => 'datetime',
         ];
@@ -48,6 +67,33 @@ class Room extends Model
     public function host(): HasOne
     {
         return $this->hasOne(Participant::class)->where('role', ParticipantRole::Host);
+    }
+
+    public function display(): HasOne
+    {
+        return $this->hasOne(Participant::class)
+            ->where('role', ParticipantRole::Display)
+            ->where('status', 'approved')
+            ->latestOfMany();
+    }
+
+    public function queueItems(): HasMany
+    {
+        return $this->hasMany(QueueItem::class);
+    }
+
+    public function currentItem(): BelongsTo
+    {
+        return $this->belongsTo(QueueItem::class, 'current_queue_item_id');
+    }
+
+    /** Songs waiting to play, in queue order. */
+    public function upcoming(): HasMany
+    {
+        return $this->queueItems()
+            ->where('status', QueueItemStatus::Queued)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 
     public function isOpen(): bool

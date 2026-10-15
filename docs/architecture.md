@@ -49,21 +49,42 @@ Guests join with the room code alone, by scanning the QR code (`/join/{code}`) o
 
 Typed codes are normalized (uppercase, spaces and dashes removed) on both client and server. Tokens expire after 24 hours. Until Phase 3, pages poll `/state` every 4 seconds.
 
-### Display pairing
+### Host and queue API
 
-The display opens `/display` and gets a single-use pairing code (expires in 5 minutes) plus a secret it keeps to itself. The host enters the code. The display polls `GET /api/pairings/{id}` with its secret and receives a token with the `display` ability.
+The host sings like any guest: Live, Queue and Search are the same screens for every phone, and host-only controls are layered on top. Host-only room switches (`allow_song_additions`, a guest's `can_add_songs`) never block the host.
 
-## Data model (planned)
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/rooms/display` | 20/min per IP (shared with join) | `{code}` connects a TV/laptop as the room's `display`. A new display replaces (and revokes) the old one. 423 if locked |
+| PATCH | `/api/rooms/{room}` | `host` | `{name, is_locked, allow_song_additions, guests_can_skip}` |
+| PATCH | `/api/rooms/{room}/participants/{p}` | `host` | `{can_add_songs}` |
+| DELETE | `/api/rooms/{room}/participants/{p}` | `host` | Remove a guest or the display: revokes its token and drops its *waiting* songs (a song already playing finishes) |
+| GET | `/api/rooms/{room}/search?q=&karaoke=1` | `host`/`guest`, 10/min per participant | YouTube search proxy |
+| POST | `/api/rooms/{room}/queue` | `host` always; `guest` if allowed | `{youtube_video_id}`. The server fetches the video's metadata itself |
+| DELETE | `/api/rooms/{room}/queue/{item}` | `host`, or the guest who added it | Waiting songs only |
+| PUT | `/api/rooms/{room}/queue/order` | `host` | `{item_ids}`: must be exactly the waiting songs (409 if the queue changed) |
+| POST | `/api/rooms/{room}/playback/skip` | `host`; `guest` if `guests_can_skip` | `{queue_item_id}` |
+| POST | `/api/rooms/{room}/playback/pause`, `/resume` | `host` | The display follows `room.playback_status` |
+| POST | `/api/rooms/{room}/playback/started`, `/ended` | `display` | `{queue_item_id}`, plus `reason: ended|error` for ended |
+
+`GET /state` also returns `queue {current, upcoming}`, `display_connected` and `server_time` (phones compute elapsed song time from `started_at`, `paused_at` and `paused_seconds` against the server clock).
+
+### Display connection
+
+The display opens `/display` and enters the room code, the same credential guests use, and gets a token with the `display` ability. It keeps that token separately from any phone session in the same browser. It plays the current song in the IFrame player, reports `started`/`ended`/`error` with the item id, and shows the invite QR between songs. It polls `/state` every 2 seconds so pause and skip feel immediate. (This replaces the earlier pairing-code plan.)
+
+## Data model
 
 ```
-rooms             id, code, status[open|closed], is_locked, requires_approval,
-                  current_queue_item_id, version, closed_at, timestamps
+rooms             id, code, name, status[open|closed], is_locked, requires_approval,
+                  allow_song_additions, guests_can_skip, current_queue_item_id,
+                  playback_status[playing|paused], paused_at, paused_seconds,
+                  version, closed_at, timestamps
 participants      id, room_id, role, display_name, status[pending|approved|rejected|kicked],
-                  last_seen_at, timestamps
+                  can_add_songs, last_seen_at, timestamps
 queue_items       id, room_id, added_by_participant_id, youtube_video_id, title,
                   channel_title, thumbnail_url, duration_seconds, position,
                   status[queued|playing|played|skipped|removed|failed], started_at, ended_at
-display_pairings  id, code, secret_hash, room_id, participant_id, expires_at, paired_at
 ```
 
 ## Queue and playback
@@ -87,10 +108,10 @@ display_pairings  id, code, secret_hash, room_id, participant_id, expires_at, pa
 
 0. Scaffold ← *done*
 1. Rooms: create, join, close; Sanctum role tokens ← *done*
-2. Queue + idempotent advance and skip
+2. Queue + idempotent advance and skip ← *done*
 3. Reverb real-time + versioned refetch
-4. Display pairing + IFrame player
-5. YouTube search proxy (cache + rate limits)
-6. Guest approval, kick, lock, host dashboard
+4. Display (room-code connect) + IFrame player ← *done*
+5. YouTube search proxy (cache + rate limits) ← *done*
+6. Kick, lock, song permissions, host dashboard ← *done* (guest approval still to do)
 7. Multi-network testing over Cloudflare Tunnel, hardening
 8. Production deploy (Nginx + Reverb proxy, Supervisor, TLS)

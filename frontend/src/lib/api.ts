@@ -36,8 +36,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   headers.set('Accept', 'application/json')
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
 
+  // Callers may pass their own Authorization (the TV display keeps a separate token).
   const token = getToken()
-  if (token) headers.set('Authorization', `Bearer ${token}`)
+  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`)
 
   const res = await fetch(`/api${path}`, { ...init, headers })
   const body = res.status === 204 ? null : await res.json().catch(() => null)

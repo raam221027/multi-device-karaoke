@@ -1,5 +1,11 @@
 <?php
 
+use App\Models\Participant;
+use App\Models\Room;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -11,7 +17,7 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
+pest()->extend(TestCase::class)
  // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
@@ -45,7 +51,7 @@ expect()->extend('toBeOne', function () {
  * Act as a device holding the given bearer token. The auth guards are reset
  * first so a test can switch between several devices' tokens.
  */
-function asDevice(string $token): Tests\TestCase
+function asDevice(string $token): TestCase
 {
     app('auth')->forgetGuards();
 
@@ -53,9 +59,46 @@ function asDevice(string $token): Tests\TestCase
 }
 
 /** Create a participant and return [participant, plain-text token]. */
-function deviceIn(App\Models\Room $room, string $role = 'guest'): array
+function deviceIn(Room $room, string $role = 'guest'): array
 {
-    $participant = App\Models\Participant::factory()->for($room)->{$role}()->create();
+    $participant = Participant::factory()->for($room)->{$role}()->create();
 
     return [$participant, $participant->issueToken()];
+}
+
+/** Fake the YouTube Data API: every requested video id exists and is embeddable. */
+function fakeYouTube(): void
+{
+    config(['services.youtube.key' => 'test-key']);
+
+    Http::fake([
+        'www.googleapis.com/youtube/v3/search*' => Http::response(['items' => [
+            ['id' => ['videoId' => 'aaaaaaaaaaa']],
+            ['id' => ['videoId' => 'bbbbbbbbbbb']],
+        ]]),
+        'www.googleapis.com/youtube/v3/videos*' => function (Request $request) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return Http::response(['items' => array_map(fn ($id) => [
+                'id' => $id,
+                'snippet' => [
+                    'title' => "Song {$id} (Karaoke Version)",
+                    'channelTitle' => 'Sing King',
+                    'thumbnails' => ['medium' => ['url' => "https://i.ytimg.com/vi/{$id}/mqdefault.jpg"]],
+                ],
+                'contentDetails' => ['duration' => 'PT3M52S'],
+                'status' => ['embeddable' => true],
+            ], explode(',', $query['id']))]);
+        },
+        'itunes.apple.com/*' => Http::response(['results' => []]),
+    ]);
+}
+
+/** Add a song as the given device and return its queue item id. */
+function addSong(Room $room, string $token, string $videoId = 'aaaaaaaaaaa'): int
+{
+    return asDevice($token)
+        ->postJson("/api/rooms/{$room->id}/queue", ['youtube_video_id' => $videoId])
+        ->assertCreated()
+        ->json('data.id');
 }

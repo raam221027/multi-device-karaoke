@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+/* Videokehan design tokens (from the Figma host screens). */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #101115;
+  --color-surface: #1b1d24;
+  --color-surface-2: #252831;
+  --color-screen: #090a0d;
+  --color-line: #333641;
+  --color-ink: #f7f7fa;
+  --color-muted: #a6a9b7;
+  --color-accent: #d4f578;
+  --color-accent-ink: #171d0e;
+  --color-accent-soft: #28331c;
+  --color-danger: #ff9999;
+  --color-danger-soft: #3a242b;
+
+  /* Avatar palette */
+  --color-lilac: #b7a8ea;
+  --color-peach: #e9b899;
+}
+
 html,
 body,
 #root {
@@ -7,5 +29,5 @@ body,
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
+  @apply bg-bg font-sans text-ink antialiased;
 }

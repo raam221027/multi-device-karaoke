@@ -23,10 +23,12 @@ class Participant extends Authenticatable
         'role',
         'display_name',
         'status',
+        'can_add_songs',
     ];
 
     protected $attributes = [
         'status' => 'approved',
+        'can_add_songs' => true,
     ];
 
     protected function casts(): array
@@ -34,6 +36,7 @@ class Participant extends Authenticatable
         return [
             'role' => ParticipantRole::class,
             'status' => ParticipantStatus::class,
+            'can_add_songs' => 'boolean',
             'last_seen_at' => 'datetime',
         ];
     }
@@ -46,6 +49,16 @@ class Participant extends Authenticatable
     public function isHost(): bool
     {
         return $this->role === ParticipantRole::Host;
+    }
+
+    public function isGuest(): bool
+    {
+        return $this->role === ParticipantRole::Guest;
+    }
+
+    public function isDisplay(): bool
+    {
+        return $this->role === ParticipantRole::Display;
     }
 
     public function isApproved(): bool

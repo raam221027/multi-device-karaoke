@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="scan-qr-code">
+<path d="M17 12v4a1 1 0 0 1-1 1h-4M17 3h2a2 2 0 0 1 2 2v2M17 8V7M21 17v2a2 2 0 0 1-2 2h-2M3 7V5a2 2 0 0 1 2-2h2M7 17h.01M7 21H5a2 2 0 0 1-2-2v-2" stroke="#F7F7FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="7" y="7" width="5" height="5" rx="1" stroke="#F7F7FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

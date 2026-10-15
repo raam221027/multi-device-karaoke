@@ -1,5 +1,5 @@
 import { ApiError, api, setToken } from './api'
-import type { CodeLookup, Me, RoomState, Session } from './types'
+import type { CodeLookup, Me, QueueItem, RoomSettings, RoomState, Session, Suggestions, Video } from './types'
 
 function post<T>(path: string, body?: unknown): Promise<T> {
   return api<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
@@ -27,8 +27,9 @@ export function getMe(): Promise<Me> {
   return api<Me>('/me')
 }
 
-export function getRoomState(roomId: number | string): Promise<RoomState> {
-  return api<RoomState>(`/rooms/${roomId}/state`)
+export async function getRoomState(roomId: number | string, init?: RequestInit): Promise<RoomState> {
+  const state = await api<Omit<RoomState, 'fetchedAt'>>(`/rooms/${roomId}/state`, init)
+  return { ...state, fetchedAt: Date.now() }
 }
 
 // Callers clear the token after navigating away, so the room page doesn't
@@ -39,6 +40,55 @@ export async function leaveRoom(roomId: number): Promise<void> {
 
 export async function closeRoom(roomId: number): Promise<void> {
   await post<null>(`/rooms/${roomId}/close`)
+}
+
+function send<T>(method: 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  return api<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) })
+}
+
+export async function updateRoom(roomId: number, settings: RoomSettings): Promise<void> {
+  await send('PATCH', `/rooms/${roomId}`, settings)
+}
+
+export async function setCanAddSongs(roomId: number, participantId: number, canAddSongs: boolean): Promise<void> {
+  await send('PATCH', `/rooms/${roomId}/participants/${participantId}`, { can_add_songs: canAddSongs })
+}
+
+export async function removeParticipant(roomId: number, participantId: number): Promise<void> {
+  await send('DELETE', `/rooms/${roomId}/participants/${participantId}`)
+}
+
+// Songs: the host sings like anyone else, so these are shared by every phone.
+
+export async function searchSongs(roomId: number, q: string, karaoke: boolean): Promise<Video[]> {
+  const params = new URLSearchParams({ q, karaoke: karaoke ? '1' : '0' })
+  return (await api<{ results: Video[] }>(`/rooms/${roomId}/search?${params}`)).results
+}
+
+/** Songs to offer before anyone types: this room's earlier songs and popular karaoke. */
+export async function getSuggestions(roomId: number, page = 0): Promise<Suggestions> {
+  return api<Suggestions>(`/rooms/${roomId}/suggestions?page=${page}`)
+}
+
+export async function addSong(roomId: number, videoId: string): Promise<QueueItem> {
+  return (await post<{ data: QueueItem }>(`/rooms/${roomId}/queue`, { youtube_video_id: videoId })).data
+}
+
+export async function removeSong(roomId: number, itemId: number): Promise<void> {
+  await send('DELETE', `/rooms/${roomId}/queue/${itemId}`)
+}
+
+export async function reorderQueue(roomId: number, itemIds: number[]): Promise<void> {
+  await send('PUT', `/rooms/${roomId}/queue/order`, { item_ids: itemIds })
+}
+
+/** Names the song being skipped so a repeated or late tap can't skip the next one. */
+export async function skipSong(roomId: number, itemId: number): Promise<void> {
+  await post<null>(`/rooms/${roomId}/playback/skip`, { queue_item_id: itemId })
+}
+
+export async function setPaused(roomId: number, paused: boolean): Promise<void> {
+  await post<null>(`/rooms/${roomId}/playback/${paused ? 'pause' : 'resume'}`)
 }
 
 /** Best human-readable message from an API failure. */
@@ -55,4 +105,15 @@ export function errorMessage(error: unknown): string {
 /** Normalize a typed code the same way the server does. */
 export function normalizeCode(code: string): string {
   return code.replace(/[\s-]+/g, '').toUpperCase()
+}
+
+/**
+ * The room code in a scanned QR: an invite link ".../join/V6C8T7" from any
+ * host (TVs encode the LAN address), or a bare code. Null for anything else.
+ */
+export function codeFromQr(text: string): string | null {
+  const value = text.trim()
+  const fromUrl = value.match(/^https?:\/\/[^/]+\/join\/([^/?#]+)\/?(?:[?#].*)?$/i)?.[1]
+  const code = normalizeCode(fromUrl ? decodeURIComponent(fromUrl) : value)
+  return /^[A-Z0-9]{6}$/.test(code) ? code : null
 }

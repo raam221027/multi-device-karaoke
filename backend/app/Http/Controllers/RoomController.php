@@ -6,8 +6,11 @@ use App\Enums\ParticipantRole;
 use App\Enums\ParticipantStatus;
 use App\Enums\RoomStatus;
 use App\Http\Requests\CreateRoomRequest;
+use App\Http\Requests\DisplayJoinRequest;
 use App\Http\Requests\JoinRoomRequest;
+use App\Http\Requests\UpdateRoomRequest;
 use App\Http\Resources\ParticipantResource;
+use App\Http\Resources\QueueItemResource;
 use App\Http\Resources\RoomResource;
 use App\Models\Participant;
 use App\Models\Room;
@@ -18,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class RoomController extends Controller
 {
@@ -26,11 +30,15 @@ class RoomController extends Controller
         // Two hosts could draw the same unused code at once; the unique index
         // catches that and we simply draw again.
         [$room, $host] = retry(3, fn () => DB::transaction(function () use ($request) {
-            $room = Room::create(['code' => RoomCode::generate()]);
+            $name = $request->string('display_name')->trim()->value();
+            $room = Room::create([
+                'code' => RoomCode::generate(),
+                'name' => Str::limit("{$name}'s living room", 40, ''),
+            ]);
 
             $host = $room->participants()->create([
                 'role' => ParticipantRole::Host,
-                'display_name' => $request->string('display_name')->trim()->value(),
+                'display_name' => $name,
                 'status' => ParticipantStatus::Approved,
             ]);
 
@@ -76,6 +84,55 @@ class RoomController extends Controller
         return $this->session($room->refresh(), $guest, 201);
     }
 
+    /**
+     * A TV or laptop browser connects by room code and becomes the room's
+     * display. Only one display at a time: a new one replaces the old.
+     */
+    public function joinAsDisplay(DisplayJoinRequest $request): JsonResponse
+    {
+        $room = $this->findOpenRoom($request->input('code'));
+
+        abort_if($room->is_locked, 423, 'This room is locked. Ask the host to allow guests to join.');
+
+        $display = DB::transaction(function () use ($room) {
+            $old = $room->participants()
+                ->where('role', ParticipantRole::Display)
+                ->where('status', ParticipantStatus::Approved)
+                ->get();
+
+            foreach ($old as $previous) {
+                $previous->update(['status' => ParticipantStatus::Kicked]);
+                $previous->tokens()->delete();
+            }
+
+            $display = $room->participants()->create([
+                'role' => ParticipantRole::Display,
+                'display_name' => 'TV display',
+                'status' => ParticipantStatus::Approved,
+                'can_add_songs' => false,
+            ]);
+
+            $room->bumpVersion();
+
+            return $display;
+        });
+
+        return $this->session($room->refresh(), $display, 201);
+    }
+
+    public function update(UpdateRoomRequest $request, Room $room): RoomResource
+    {
+        Gate::authorize('manage', $room);
+
+        DB::transaction(function () use ($request, $room) {
+            $locked = Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
+            $locked->update($request->validated());
+            $locked->bumpVersion();
+        });
+
+        return new RoomResource($room->refresh());
+    }
+
     public function state(Request $request, Room $room): JsonResponse
     {
         Gate::authorize('view', $room);
@@ -92,10 +149,19 @@ class RoomController extends Controller
             ->orderBy('id')
             ->get();
 
+        $room->load(['currentItem.addedBy', 'upcoming.addedBy']);
+
         return response()->json([
             'room' => new RoomResource($room),
             'participants' => ParticipantResource::collection($participants),
             'me' => new ParticipantResource($me),
+            'queue' => [
+                'current' => $room->currentItem ? new QueueItemResource($room->currentItem) : null,
+                'upcoming' => QueueItemResource::collection($room->upcoming),
+            ],
+            'display_connected' => $participants->contains(fn (Participant $p) => $p->isDisplay()),
+            // Lets clients compute elapsed song time without trusting their own clock.
+            'server_time' => now(),
         ]);
     }
 

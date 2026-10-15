@@ -37,6 +37,15 @@ return [
 
     'youtube' => [
         'key' => env('YOUTUBE_API_KEY'),
+        // Searches behind the "Popular karaoke" suggestions, refreshed weekly.
+        'popular_searches' => [
+            'OPM karaoke hits',
+            'greatest karaoke songs of all time',
+            'love songs karaoke',
+            '90s karaoke hits',
+            'pop karaoke hits',
+            'rock karaoke songs',
+        ],
     ],
 
     'frontend' => [

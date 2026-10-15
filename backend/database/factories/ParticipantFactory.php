@@ -4,11 +4,12 @@ namespace Database\Factories;
 
 use App\Enums\ParticipantRole;
 use App\Enums\ParticipantStatus;
+use App\Models\Participant;
 use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Participant>
+ * @extends Factory<Participant>
  */
 class ParticipantFactory extends Factory
 {
@@ -30,5 +31,10 @@ class ParticipantFactory extends Factory
     public function guest(): static
     {
         return $this->state(['role' => ParticipantRole::Guest]);
+    }
+
+    public function display(): static
+    {
+        return $this->state(['role' => ParticipantRole::Display, 'display_name' => 'TV display']);
     }
 }

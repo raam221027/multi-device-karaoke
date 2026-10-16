@@ -45,8 +45,8 @@ function MoreButton({ onClick, disabled }: { onClick: () => void; disabled?: boo
 
 // The design cycles the placeholder artwork through the avatar palette.
 const ARTWORK = [
-  { icon: icons.audioLinesLilac, text: 'text-lilac' },
   { icon: icons.audioLinesLime, text: 'text-accent' },
+  { icon: icons.audioLinesLilac, text: 'text-lilac' },
   { icon: icons.audioLinesPeach, text: 'text-peach' },
 ]
 

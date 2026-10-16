@@ -73,6 +73,8 @@ The host sings like any guest: Live, Queue and Search are the same screens for e
 
 The display opens `/display` and enters the room code, the same credential guests use, and gets a token with the `display` ability. It keeps that token separately from any phone session in the same browser. It plays the current song in the IFrame player, reports `started`/`ended`/`error` with the item id, and shows the invite QR between songs. It polls `/state` every 2 seconds so pause and skip feel immediate. (This replaces the earlier pairing-code plan.)
 
+Any browser can be the display: a TV, laptop, tablet, or a spare phone when the party has nothing bigger. The host's TV invite page shows a second QR, `/display?code={code}`, which opens the display page with the code filled in. The device still has to tap **Connect**, because that tap unlocks audio and prevents a stray scan from replacing the current display. The home page also links to `/display` ("Use this device as the screen"). This link carries the same room code guests use, so it adds no new credential, and the `room-code` throttle and the 423 response for locked rooms still apply. On touch devices, Connect and "Tap to start" also request fullscreen and a landscape lock (Android; iOS shows a "turn sideways" hint), and the display holds a Screen Wake Lock while it's running.
+
 ## Data model
 
 ```

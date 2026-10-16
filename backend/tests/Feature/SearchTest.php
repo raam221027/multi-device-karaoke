@@ -25,6 +25,23 @@ it('returns embeddable karaoke results with durations', function () {
     Http::assertSent(fn ($r) => str_contains($r->url(), '/search') && str_contains(urldecode($r->url()), 'abba karaoke'));
 });
 
+it('names the song, not the band, in results', function () {
+    config(['services.youtube.key' => 'test-key']);
+    Http::fake([
+        'www.googleapis.com/youtube/v3/search*' => Http::response(['items' => [['id' => ['videoId' => 'aaaaaaaaaaa']]]]),
+        'www.googleapis.com/youtube/v3/videos*' => Http::response(['items' => [
+            ['id' => 'aaaaaaaaaaa', 'snippet' => ['title' => 'Pagsubok - Orient Pearl (Karaoke)'], 'contentDetails' => ['duration' => 'PT3M39S']],
+        ]]),
+        'itunes.apple.com/*' => Http::response(['results' => [['trackName' => 'Pagsubok', 'artistName' => 'Orient Pearl']]]),
+    ]);
+
+    asDevice($this->guestToken)
+        ->getJson("/api/rooms/{$this->room->id}/search?q=Pagsubok")
+        ->assertOk()
+        ->assertJsonPath('results.0.song_title', 'Pagsubok')
+        ->assertJsonPath('results.0.artist', 'Orient Pearl');
+});
+
 it('caches results by normalized query', function () {
     fakeYouTube();
 

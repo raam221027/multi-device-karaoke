@@ -80,9 +80,16 @@ export async function makeDisplay(roomId: number, participantId: number): Promis
 
 // Songs: the host sings like anyone else, so these are shared by every phone.
 
-export async function searchSongs(roomId: number, q: string, karaoke: boolean): Promise<Video[]> {
+/** One page of YouTube results; pass `next_page` back as `page` for more. */
+export async function searchSongs(
+  roomId: number,
+  q: string,
+  karaoke: boolean,
+  page?: string | null,
+): Promise<{ results: Video[]; next_page: string | null }> {
   const params = new URLSearchParams({ q, karaoke: karaoke ? '1' : '0' })
-  return (await api<{ results: Video[] }>(`/rooms/${roomId}/search?${params}`)).results
+  if (page) params.set('page', page)
+  return api(`/rooms/${roomId}/search?${params}`)
 }
 
 /** Songs to offer before anyone types: this room's earlier songs and popular karaoke. */

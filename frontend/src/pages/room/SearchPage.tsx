@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import * as icons from '../../assets/icons'
 import { useRoom, useRoomMutation } from '../../lib/roomContext'
@@ -120,14 +120,21 @@ export default function SearchPage() {
   const [submitted, setSubmitted] = useState('')
   const [karaoke, setKaraoke] = useState(true)
 
-  // search.list costs YouTube quota, so search on submit rather than per keystroke.
-  const results = useQuery({
+  // search.list costs YouTube quota, so search on submit rather than per
+  // keystroke, and fetch further pages only when someone taps More.
+  const results = useInfiniteQuery({
     queryKey: ['search', roomId, submitted, karaoke],
-    queryFn: () => searchSongs(roomId, submitted, karaoke),
+    queryFn: ({ pageParam }) => searchSongs(roomId, submitted, karaoke, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next_page,
     enabled: submitted.length >= 2,
     staleTime: 10 * 60_000,
     retry: false,
   })
+  // YouTube pages can overlap, so keep each video once.
+  const found = results.data?.pages
+    .flatMap((page) => page.results)
+    .filter((video, i, all) => all.findIndex((v) => v.id === video.id) === i)
 
   // Suggestions while typing, once the typing pauses. They come from iTunes, so
   // they cost no YouTube quota; tapping one runs the real search.
@@ -308,13 +315,23 @@ export default function SearchPage() {
         <section className="flex flex-col">
           <SectionHeading
             title="Top matches"
-            aside={results.data ? plural(results.data.length, 'result') : results.isFetching ? 'Searching…' : null}
+            aside={found ? plural(found.length, 'result') : results.isFetching ? 'Searching…' : null}
           />
           <ErrorText>{results.isError && errorMessage(results.error)}</ErrorText>
-          {results.data?.length === 0 && (
+          {found?.length === 0 && (
             <p className="py-3.5 text-[13px] text-muted">No embeddable videos found. Try another spelling.</p>
           )}
-          {results.data && songRows(results.data)}
+          {found && songRows(found)}
+          {results.hasNextPage && (
+            <Button
+              variant="secondary"
+              className="mt-4"
+              onClick={() => results.fetchNextPage()}
+              disabled={results.isFetchingNextPage}
+            >
+              {results.isFetchingNextPage ? 'Loading…' : 'More'}
+            </Button>
+          )}
           <ErrorText>{add.isError && errorMessage(add.error)}</ErrorText>
         </section>
       )}

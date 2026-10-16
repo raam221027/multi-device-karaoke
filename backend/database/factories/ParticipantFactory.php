@@ -35,6 +35,6 @@ class ParticipantFactory extends Factory
 
     public function display(): static
     {
-        return $this->state(['role' => ParticipantRole::Display, 'display_name' => 'TV display']);
+        return $this->state(['role' => ParticipantRole::Display, 'display_name' => 'PC', 'device' => 'PC']);
     }
 }

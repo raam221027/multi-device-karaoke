@@ -135,3 +135,8 @@ export function singerStatus(state: RoomState, participantId: number): string | 
   const queued = upcoming.filter((item) => item.added_by.id === participantId).length
   return queued > 0 ? `${queued} ${queued === 1 ? 'song' : 'songs'} queued` : null
 }
+
+/** The screen's name: whose phone it is ("Ana - Display") or what joined by code ("PC - Display"). */
+export function displayLabel(p: Pick<Participant, 'device' | 'display_name'>): string {
+  return `${p.device ?? p.display_name ?? 'Screen'} - Display`
+}

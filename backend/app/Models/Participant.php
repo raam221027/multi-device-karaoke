@@ -22,6 +22,7 @@ class Participant extends Authenticatable
     protected $fillable = [
         'role',
         'display_name',
+        'device',
         'status',
         'can_add_songs',
     ];
@@ -56,6 +57,12 @@ class Participant extends Authenticatable
         return $this->role === ParticipantRole::Guest;
     }
 
+    /** A screen that joined by code, with no person behind it. */
+    public function isScreenOnly(): bool
+    {
+        return $this->device !== null;
+    }
+
     public function isDisplay(): bool
     {
         return $this->role === ParticipantRole::Display;
@@ -64,6 +71,13 @@ class Participant extends Authenticatable
     public function isApproved(): bool
     {
         return $this->status === ParticipantStatus::Approved;
+    }
+
+    /** Change role in place: existing tokens keep working but carry the new ability. */
+    public function assignRole(ParticipantRole $role): void
+    {
+        $this->update(['role' => $role]);
+        $this->tokens()->update(['abilities' => json_encode([$role->value])]);
     }
 
     public function issueToken(): string

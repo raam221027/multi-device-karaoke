@@ -1,11 +1,11 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import * as icons from '../../assets/icons'
 import { useRoom, useRoomMutation } from '../../lib/roomContext'
-import { Avatar, Button, ErrorText, Icon, PageHeading, Screen, StatusPill } from '../../components/ui'
-import { plural } from '../../lib/format'
+import { Avatar, Button, ErrorText, Icon, PageHeading, Screen, StatusPill, TextLink } from '../../components/ui'
+import { displayLabel, plural } from '../../lib/format'
 import { errorMessage, removeParticipant } from '../../lib/rooms'
 
-/** "Remove guest · Confirmation". Also disconnects the TV display. */
+/** "Remove guest · Confirmation". Also disconnects the display. */
 export default function RemoveGuestPage() {
   const { state, roomId, base } = useRoom()
   const navigate = useNavigate()
@@ -45,10 +45,12 @@ export default function RemoveGuestPage() {
         </div>
 
         <div className="flex flex-col gap-3 text-center">
-          <h2 className="text-[28px] font-bold">Remove {isDisplay ? 'the TV' : guest.display_name}?</h2>
+          <h2 className="text-[28px] font-bold">
+            {isDisplay ? `Disconnect ${displayLabel(guest)}?` : `Remove ${guest.display_name}?`}
+          </h2>
           <p className="text-[14px] leading-[1.45] text-muted">
             {isDisplay
-              ? 'The TV stops playing and goes back to its connect screen. Everyone keeps their place in the queue.'
+              ? 'It stops playing and goes back to its connect screen. Everyone keeps their place in the queue. To move playback instead, just connect the new screen.'
               : `${guest.display_name}’s current browser session will lose access to this room. Everyone else keeps singing.`}
           </p>
         </div>
@@ -76,11 +78,20 @@ export default function RemoveGuestPage() {
         <div className="flex flex-col gap-2.5">
           <ErrorText>{remove.isError && errorMessage(remove.error)}</ErrorText>
           <Button variant="danger" icon={icons.userMinusButton} onClick={() => remove.mutate()} disabled={remove.isPending}>
-            {isDisplay ? 'Disconnect the TV' : `Remove ${guest.display_name}`}
+            {isDisplay ? `Disconnect ${displayLabel(guest)}` : `Remove ${guest.display_name}`}
           </Button>
           <Button variant="secondary" onClick={() => navigate(guestsPath)}>
-            {isDisplay ? 'Keep the TV connected' : `Keep ${guest.display_name} in the room`}
+            {isDisplay ? 'Keep it connected' : `Keep ${guest.display_name} in the room`}
           </Button>
+          {isDisplay ? (
+            <TextLink to={`${base}/invite/tv`} className="text-center">
+              Switch to another display instead
+            </TextLink>
+          ) : (
+            <TextLink to={`${guestsPath}/${guest.id}/make-host`} className="text-center">
+              Make {guest.display_name} the host instead
+            </TextLink>
+          )}
         </div>
       </section>
 

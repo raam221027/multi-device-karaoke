@@ -16,6 +16,7 @@ class DisplayJoinRequest extends FormRequest
     {
         return [
             'code' => ['required', 'string', 'regex:/^['.RoomCode::ALPHABET.']{'.RoomCode::LENGTH.'}$/'],
+            'device' => ['nullable', 'string', 'in:Mobile,Tablet,PC,TV'],
         ];
     }
 

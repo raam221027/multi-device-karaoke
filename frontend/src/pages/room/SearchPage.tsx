@@ -1,10 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import * as icons from '../../assets/icons'
 import { useRoom, useRoomMutation } from '../../lib/roomContext'
 import { Button, ErrorText, Icon, Note, PageHeading, Screen, SectionHeading } from '../../components/ui'
 import { formatDuration, parseSongTitle, plural } from '../../lib/format'
-import { addSong, errorMessage, getSuggestions, searchSongs } from '../../lib/rooms'
+import { addSong, errorMessage, getAutocomplete, getSuggestions, searchSongs } from '../../lib/rooms'
 import type { QueueItem, Video } from '../../lib/types'
 
 // One-tap searches for people who'd rather browse than type: genres, eras, moods and artists.
@@ -19,6 +19,11 @@ const IDEAS = [
   'Lady Gaga', 'Journey', 'Elvis Presley',
 ]
 const IDEAS_SHOWN = 9
+
+/** A fresh shuffle order for the popular songs. */
+function newSeed(): number {
+  return Math.floor(Math.random() * 2 ** 31)
+}
 
 /** A random handful of ideas, avoiding the ones on screen so "More" always shows something new. */
 function pickIdeas(current: string[]): string[] {
@@ -124,21 +129,49 @@ export default function SearchPage() {
     retry: false,
   })
 
+  // Suggestions while typing, once the typing pauses. They come from iTunes, so
+  // they cost no YouTube quota; tapping one runs the real search.
+  const [focused, setFocused] = useState(false)
+  const [typed, setTyped] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setTyped(text.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [text])
+  const showSuggestions = focused && typed.length >= 2 && typed !== submitted
+  const autocomplete = useQuery({
+    queryKey: ['autocomplete', roomId, typed],
+    queryFn: () => getAutocomplete(roomId, typed),
+    enabled: showSuggestions,
+    staleTime: 10 * 60_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+  })
+  const typedSuggestions = showSuggestions ? (autocomplete.data ?? []) : []
+
   const [ideas, setIdeas] = useState(() => pickIdeas([]))
 
-  // Shown before anyone types. The server caches the popular pool; "More" pages through it.
+  // Shown before anyone types. The server caches the popular pool and shuffles
+  // it by this visit's seed, so each visit opens on different songs; "More"
+  // pages through that order, and a new seed reshuffles once it runs out.
+  const [popularSeed, setPopularSeed] = useState(newSeed)
   const [popularPage, setPopularPage] = useState(0)
   const popularRef = useRef<HTMLElement>(null)
   const suggestions = useQuery({
-    queryKey: ['suggestions', roomId, popularPage],
-    queryFn: () => getSuggestions(roomId, popularPage),
+    queryKey: ['suggestions', roomId, popularSeed, popularPage],
+    queryFn: () => getSuggestions(roomId, popularPage, popularSeed),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
   })
 
   function morePopular() {
     if (!suggestions.data) return
-    setPopularPage(suggestions.data.page + 1)
+    const { page, pages } = suggestions.data
+    if (page + 1 >= pages) {
+      setPopularSeed(newSeed())
+      setPopularPage(0)
+    } else {
+      setPopularPage(page + 1)
+    }
     popularRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -162,11 +195,13 @@ export default function SearchPage() {
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setSubmitted(text.trim())
+    setFocused(false)
   }
 
   function searchFor(query: string) {
     setText(query)
     setSubmitted(query)
+    setFocused(false)
   }
 
   function songRows(videos: Video[]) {
@@ -190,7 +225,7 @@ export default function SearchPage() {
 
   return (
     <Screen>
-      <PageHeading eyebrow="Song search" title="Find your next anthem." />
+      <PageHeading eyebrow="Song search" title="Find your next song." />
 
       <form onSubmit={onSubmit} role="search">
         <label className="flex h-[54px] items-center gap-3 rounded-2xl border border-line bg-surface px-4 focus-within:border-accent">
@@ -199,7 +234,13 @@ export default function SearchPage() {
             type="search"
             enterKeyHint="search"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value)
+              setFocused(true)
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            autoComplete="off"
             placeholder="Song or artist"
             aria-label="Search for a song or artist"
             maxLength={80}
@@ -218,6 +259,27 @@ export default function SearchPage() {
             </button>
           )}
         </label>
+        {typedSuggestions.length > 0 && (
+          <ul aria-label="Suggestions" className="mt-2 overflow-hidden rounded-2xl border border-line bg-surface">
+            {typedSuggestions.map((s) => (
+              <li key={`${s.type}:${s.query}`} className="border-b border-line last:border-b-0">
+                <button
+                  type="button"
+                  // Keep the input focused until the tap lands, or the list closes first.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => searchFor(s.query)}
+                  className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2"
+                >
+                  <Icon src={s.type === 'artist' ? icons.micVocal : icons.music2} size={18} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[14px] font-semibold">{s.label}</span>
+                    <span className="truncate text-[11px] text-muted">{s.type === 'artist' ? 'Artist' : s.artist}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </form>
 
       <div className="flex items-center gap-2">

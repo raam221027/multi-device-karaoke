@@ -39,6 +39,31 @@ it('pages through the popular songs and wraps around', function () {
     $page(2)->assertJsonPath('popular.*.id', array_slice($ids, 0, 12))->assertJsonPath('page', 0);
 });
 
+it('shuffles the popular songs by seed', function () {
+    config(['services.youtube.key' => 'test-key', 'services.youtube.popular_searches' => ['OPM karaoke hits']]);
+    $ids = array_map(fn ($i) => sprintf('video%06d', $i), range(1, 15));
+    Http::fake([
+        'www.googleapis.com/youtube/v3/search*' => Http::response(['items' => array_map(fn ($id) => ['id' => ['videoId' => $id]], $ids)]),
+        'www.googleapis.com/youtube/v3/videos*' => Http::response(['items' => array_map(fn ($id) => [
+            'id' => $id, 'snippet' => ['title' => "Song {$id} (Karaoke)"], 'contentDetails' => ['duration' => 'PT4M'],
+        ], $ids)]),
+        'itunes.apple.com/*' => Http::response(['results' => []]),
+    ]);
+
+    $page = fn ($n, $seed) => asDevice($this->hostToken)
+        ->getJson("/api/rooms/{$this->room->id}/suggestions?page={$n}&seed={$seed}")
+        ->assertOk()
+        ->json('popular.*.id');
+
+    // The same visit sees the same order, so "More" never repeats a song.
+    expect($page(0, 42))->toBe($page(0, 42));
+    $all = [...$page(0, 42), ...$page(1, 42)];
+    expect($all)->toHaveCount(15)->and(array_unique($all))->toEqualCanonicalizing($ids);
+
+    // Another visit opens on a different order.
+    expect($page(0, 7))->not->toBe($page(0, 42));
+});
+
 it('shares popular karaoke songs between rooms and caches them for a week', function () {
     config(['services.youtube.popular_searches' => ['OPM karaoke hits', 'greatest karaoke songs']]);
     fakeYouTube();

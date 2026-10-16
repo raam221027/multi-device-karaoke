@@ -78,7 +78,6 @@ export default function HomePage() {
           <Icon src={icons.audioLinesBrand} size={26} />
           <span className="text-[25px] font-extrabold">Videokehan</span>
         </div>
-        <span className="text-[11px] text-muted">Good company. Great songs.</span>
       </header>
 
       {notice && <p className="rounded-xl bg-surface p-3 text-center text-[13px] text-muted">{notice}</p>}
@@ -87,18 +86,17 @@ export default function HomePage() {
         <img src={friendsSinging} alt="Friends singing karaoke together at home" className="absolute inset-0 size-full object-cover" />
         <div className="absolute bottom-4 left-4 flex items-center gap-[7px] rounded-full bg-bg px-3 py-2">
           <Icon src={icons.sparkles} size={14} />
-          <span className="text-[11px] font-semibold">Your living room. Your main stage.</span>
+          <span className="text-[11px] font-semibold">Your friends. Your songs. Your Videokehan.</span>
         </div>
       </div>
 
       <div className="flex flex-col gap-3">
-        <h1 className="text-[40px] leading-[1.05] font-extrabold">
-          Big choruses.
-          <br />
-          <span className="text-accent">Little setup.</span>
+        <h1 className="text-[30px] leading-[1.05] font-extrabold">
+          <span className="text-accent">Birit</span> starts here.
+          
         </h1>
         <p className="text-[15px] leading-[1.45] text-muted">
-          Bring everyone into the song. Host from your phone, share a QR, and let the queue fill up.
+         Start your room, invite your friends, and sing together.
         </p>
       </div>
 
@@ -160,7 +158,7 @@ export default function HomePage() {
           Use this device as the screen
         </Link>
 
-        <p className="text-center text-[12px] leading-[1.45] text-muted">No downloads. No accounts. No emails.</p>
+        <p className="text-center text-[12px] leading-[1.45] text-muted">No downloads. No account needed to join.</p>
       </div>
 
       <ol className="flex justify-between pt-2 text-[11px]">

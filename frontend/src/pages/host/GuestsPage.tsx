@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import * as icons from '../../assets/icons'
 import { useRoom, useRoomMutation } from '../../lib/roomContext'
 import { Avatar, Button, ErrorText, Icon, Lead, Note, PageHeading, Screen, StatusPill, TextLink, Toggle } from '../../components/ui'
-import { phones, plural, singerStatus } from '../../lib/format'
+import { displayLabel, phones, plural, singerStatus } from '../../lib/format'
 import { errorMessage, setCanAddSongs } from '../../lib/rooms'
 import { joinUrl, useShare } from '../../lib/share'
 import type { Participant } from '../../lib/types'
@@ -44,7 +44,7 @@ export default function GuestsPage() {
         title="Your kind of crowd."
         action={<TextLink to={`${base}/invite`}>Invite +</TextLink>}
       />
-      <Lead>Keep the good times flowing. Decide who can add songs or remove a guest.</Lead>
+      <Lead>Keep the good times flowing. Decide who can add songs, remove a guest, or make someone else the host.</Lead>
 
       <section>
         <div className="flex gap-3 pb-2 text-[10px] text-muted">
@@ -73,8 +73,14 @@ export default function GuestsPage() {
               <Avatar id={guest.id} name={guest.display_name} size={36} />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <p className="truncate text-[14px]">{guest.display_name}</p>
-                <p className={`text-[10px] ${canAdd ? 'text-muted' : 'text-danger'}`}>
-                  {canAdd ? (singerStatus(state, guest.id) ?? 'Joined') : 'Song additions blocked'}
+                <p className="truncate text-[10px]">
+                  <span className={canAdd ? 'text-muted' : 'text-danger'}>
+                    {canAdd ? (singerStatus(state, guest.id) ?? 'Joined') : 'Song additions blocked'}
+                  </span>
+                  <span className="text-muted"> · </span>
+                  <Link to={`${base}/guests/${guest.id}/make-host`} className="font-semibold text-accent">
+                    Make host
+                  </Link>
                 </p>
               </div>
               <Toggle
@@ -99,12 +105,17 @@ export default function GuestsPage() {
               <Icon src={icons.monitor} size={18} />
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <p className="text-[14px]">TV display</p>
-              <p className="text-[10px] text-muted">Plays the videos</p>
+              <p className="truncate text-[14px]">{displayLabel(display)}</p>
+              <p className="text-[10px]">
+                <span className="text-muted">Plays the videos · </span>
+                <Link to={`${base}/invite/tv`} className="font-semibold text-accent">
+                  Switch display
+                </Link>
+              </p>
             </div>
             <Link
               to={`${base}/guests/${display.id}/remove`}
-              aria-label="Disconnect the TV display"
+              aria-label="Disconnect the display"
               className="flex size-11 shrink-0 items-center justify-center"
             >
               <Icon src={icons.userMinus} size={19} />

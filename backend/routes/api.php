@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AutocompleteController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\PlaybackController;
@@ -41,13 +42,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/rooms/{room}/state', [RoomController::class, 'state']);
     Route::post('/rooms/{room}/leave', [RoomController::class, 'leave'])->middleware('ability:guest,display');
+    Route::post('/rooms/{room}/use-as-display', [RoomController::class, 'useAsDisplay'])->middleware('ability:guest');
 
     // Host-only room management.
     Route::middleware('ability:host')->group(function () {
         Route::post('/rooms/{room}/close', [RoomController::class, 'close']);
+        Route::post('/rooms/{room}/become-display', [RoomController::class, 'becomeDisplay']);
         Route::patch('/rooms/{room}', [RoomController::class, 'update']);
         Route::patch('/rooms/{room}/participants/{participant}', [ParticipantController::class, 'update']);
         Route::delete('/rooms/{room}/participants/{participant}', [ParticipantController::class, 'destroy']);
+        Route::post('/rooms/{room}/participants/{participant}/make-host', [ParticipantController::class, 'makeHost']);
+        Route::post('/rooms/{room}/participants/{participant}/make-display', [ParticipantController::class, 'makeDisplay']);
         Route::put('/rooms/{room}/queue/order', [QueueController::class, 'reorder']);
         Route::post('/rooms/{room}/playback/pause', [PlaybackController::class, 'pause']);
         Route::post('/rooms/{room}/playback/resume', [PlaybackController::class, 'resume']);
@@ -57,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('ability:host,guest')->group(function () {
         Route::get('/rooms/{room}/search', SearchController::class)->middleware('throttle:search');
         Route::get('/rooms/{room}/suggestions', SuggestionController::class);
+        Route::get('/rooms/{room}/autocomplete', AutocompleteController::class)->middleware('throttle:autocomplete');
         Route::post('/rooms/{room}/queue', [QueueController::class, 'store']);
         Route::delete('/rooms/{room}/queue/{item}', [QueueController::class, 'destroy']);
         Route::post('/rooms/{room}/playback/skip', [PlaybackController::class, 'skip']);

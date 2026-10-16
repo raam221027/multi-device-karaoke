@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, Card, ErrorText, Page, TextInput } from '../components/ui'
 import { ApiError } from '../lib/api'
+import { clearDisplayEnded, connectDisplay, displayEnded } from '../lib/display'
 import { errorMessage, joinRoom, lookupCode, normalizeCode } from '../lib/rooms'
 
 function Problem({ title, detail }: { title: string; detail: string }) {
@@ -32,7 +33,17 @@ export default function JoinPage() {
 
   const join = useMutation({
     mutationFn: () => joinRoom(code, name.trim()),
-    onSuccess: (session) => navigate(`/room/${session.room.id}`, { replace: true }),
+    onSuccess: (session) => {
+      clearDisplayEnded()
+      navigate(`/room/${session.room.id}`, { replace: true })
+    },
+  })
+
+  // A device that was the screen until it got replaced can take the screen back instead.
+  const wasScreen = displayEnded()
+  const screen = useMutation({
+    mutationFn: () => connectDisplay(code),
+    onSuccess: () => navigate('/display', { replace: true }),
   })
 
   function onSubmit(e: FormEvent) {
@@ -87,6 +98,16 @@ export default function JoinPage() {
           </Button>
         </form>
       </Card>
+
+      {wasScreen && (
+        <div className="flex flex-col gap-2">
+          <Button variant="secondary" onClick={() => screen.mutate()} disabled={screen.isPending || join.isPending}>
+            {screen.isPending ? 'Connecting…' : 'Use this device as the display instead'}
+          </Button>
+          <p className="text-center text-[12px] text-muted">This replaces the screen that’s playing now.</p>
+          <ErrorText>{screen.isError && errorMessage(screen.error)}</ErrorText>
+        </div>
+      )}
     </Page>
   )
 }

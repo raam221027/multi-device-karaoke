@@ -13,6 +13,7 @@ export default function GuestRoomPage() {
   const navigate = useNavigate()
   const { room, me } = state
   const people = phones(state.participants)
+  const host = people.find((p) => p.role === 'host')
 
   const leave = useMutation({
     mutationFn: () => leaveRoom(roomId),
@@ -46,6 +47,11 @@ export default function GuestRoomPage() {
         {canAdd ? 'You can add songs.' : 'The host has paused song adding for you.'}{' '}
         {room.guests_can_skip ? 'Guests can skip the current song.' : 'Only the host skips songs.'}
       </Note>
+
+      <p className="text-[12px] leading-[1.45] text-muted">
+        Want to run the room? Ask {host?.display_name ?? 'the host'} to make you the host from their Guests tab. This
+        phone switches over on its own.
+      </p>
 
       <ErrorText>{leave.isError && errorMessage(leave.error)}</ErrorText>
       <Button variant="danger" onClick={() => leave.mutate()} disabled={leave.isPending}>

@@ -87,6 +87,19 @@ it('connects a display by room code, replacing any previous one', function () {
         ->assertJsonPath('display_connected', true);
 });
 
+it('names the screen after its device', function () {
+    $this->postJson('/api/rooms/display', ['code' => $this->room->code, 'device' => 'Tablet'])
+        ->assertCreated()
+        ->assertJsonPath('participant.device', 'Tablet')
+        ->assertJsonPath('participant.display_name', 'Tablet');
+
+    $this->postJson('/api/rooms/display', ['code' => $this->room->code])
+        ->assertCreated()
+        ->assertJsonPath('participant.device', 'Screen');
+
+    $this->postJson('/api/rooms/display', ['code' => $this->room->code, 'device' => 'Toaster'])->assertUnprocessable();
+});
+
 it('does not connect a display to a locked room', function () {
     $this->room->update(['is_locked' => true]);
 

@@ -20,6 +20,8 @@ export type Participant = {
   id: number
   room_id: number
   display_name: string
+  /** Set only for a screen that joined by code (Mobile, Tablet, PC, TV). */
+  device: string | null
   role: Role
   status: 'pending' | 'approved' | 'rejected' | 'kicked'
   can_add_songs: boolean
@@ -36,6 +38,8 @@ export type QueueItem = {
   channel_title: string | null
   thumbnail_url: string | null
   duration_seconds: number | null
+  /** Times the TV swapped in another upload because the chosen one wouldn't play there. */
+  video_swaps: number
   position: number
   status: 'queued' | 'playing' | 'played' | 'skipped' | 'removed' | 'failed'
   started_at: string | null
@@ -52,6 +56,9 @@ export type Video = {
   thumbnail_url: string | null
   duration_seconds: number | null
 }
+
+/** A song or artist offered while typing a search; `query` is what tapping it searches for. */
+export type SearchSuggestion = { type: 'song' | 'artist'; label: string; artist?: string; query: string }
 
 export type Suggestions = {
   popular: Video[]

@@ -29,5 +29,8 @@ class AppServiceProvider extends ServiceProvider
 
         // YouTube search.list costs 100 of the default 10,000 daily quota units.
         RateLimiter::for('search', fn (Request $request) => Limit::perMinute(10)->by('participant:'.$request->user()?->id));
+
+        // Suggestions while typing come from iTunes (free) and are cached, so allow one per keystroke pause.
+        RateLimiter::for('autocomplete', fn (Request $request) => Limit::perMinute(60)->by('participant:'.$request->user()?->id));
     }
 }

@@ -107,6 +107,31 @@ class QueueService
         });
     }
 
+    /**
+     * Play another upload of the current song in the same turn. Names the
+     * video it replaces, so a repeated error report swaps only once.
+     */
+    public function replaceVideo(Room $room, int $expectedItemId, string $expectedVideoId, array $video): void
+    {
+        $this->locked($room, function (Room $room) use ($expectedItemId, $expectedVideoId, $video) {
+            $item = $room->queueItems()->whereKey($expectedItemId)->first();
+            if ($room->current_queue_item_id !== $expectedItemId || $item?->youtube_video_id !== $expectedVideoId) {
+                return false;
+            }
+
+            $item->update([
+                'youtube_video_id' => $video['id'],
+                'title' => $video['title'],
+                'channel_title' => $video['channel_title'],
+                'thumbnail_url' => $video['thumbnail_url'],
+                'duration_seconds' => $video['duration_seconds'],
+                'video_swaps' => $item->video_swaps + 1,
+                'started_at' => now(),
+            ]);
+            $room->forceFill(['paused_seconds' => 0, 'paused_at' => $room->paused_at ? now() : null])->save();
+        });
+    }
+
     /** The display reports that the video really started, so elapsed time is accurate. */
     public function markStarted(Room $room, int $expectedItemId): void
     {

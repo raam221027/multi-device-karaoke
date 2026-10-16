@@ -1,5 +1,8 @@
-import { Link, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
+import { setToken } from '../lib/api'
+import { phoneBecomesDisplay } from '../lib/display'
 import { RoomContext } from '../lib/roomContext'
 import { useRoomState } from '../lib/useRoomState'
 import { Loading } from './ui'
@@ -57,6 +60,19 @@ function BottomNav({ base, tabs }: { base: string; tabs: Tab[] }) {
   )
 }
 
+/** Same token, new role: move it to the display session and open the display. */
+function BecomeDisplay({ roomId }: { roomId: number }) {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    phoneBecomesDisplay(roomId)
+    navigate('/display', { replace: true })
+    setToken(null)
+  }, [roomId, navigate])
+
+  return <Loading />
+}
+
 /**
  * Shell for every in-room screen. The host and guests share screens (Live,
  * Queue, Search), so the host can sing like anyone else; host-only controls
@@ -70,6 +86,14 @@ export default function RoomLayout({ role }: { role: 'host' | 'guest' }) {
 
   const state = query.data
   const isHost = state.me.role === 'host'
+
+  // Roles change in place, so a cached role can be from an earlier stint (say,
+  // as the screen). Only a fresh answer may move this device to another page.
+  const roleMismatch = state.me.role === 'display' || (role === 'host') !== isHost
+  if (roleMismatch && !query.isFetchedAfterMount) return <Loading />
+
+  // The host handed off and turned this phone into the screen.
+  if (state.me.role === 'display') return <BecomeDisplay roomId={state.room.id} />
 
   // Each role has its own URL space; send a device to the right one.
   if (role === 'host' && !isHost) return <Navigate to={`/room/${state.room.id}`} replace />

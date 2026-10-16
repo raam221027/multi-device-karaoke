@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\QueueItemStatus;
 use App\Models\Room;
+use App\Services\AlternativeVideo;
 use App\Services\QueueService;
+use App\Services\YouTube;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
@@ -44,25 +46,60 @@ class PlaybackController extends Controller
         return response()->noContent();
     }
 
-    public function started(Request $request, Room $room): Response
+    public function started(Request $request, Room $room, YouTube $youtube): Response
     {
         Gate::authorize('reportPlayback', $room);
 
-        $this->queue->markStarted($room, $this->itemId($request));
+        $itemId = $this->itemId($request);
+        $this->queue->markStarted($room, $itemId);
+
+        // It really plays on a TV, so searches rank it first from now on.
+        if ($room->current_queue_item_id === $itemId && $item = $room->queueItems()->find($itemId)) {
+            $youtube->markPlayable($item->youtube_video_id);
+        }
 
         return response()->noContent();
     }
 
-    public function ended(Request $request, Room $room): Response
+    /** Player error codes for "this video can't play here" (removed, or embedding refused by its owner). */
+    private const UNPLAYABLE = [100, 101, 150];
+
+    private const MAX_SWAPS = 2;
+
+    public function ended(Request $request, Room $room, YouTube $youtube, AlternativeVideo $alternatives): Response
     {
         Gate::authorize('reportPlayback', $room);
 
-        $reason = $request->validate(['reason' => ['required', 'in:ended,error']])['reason'];
+        $data = $request->validate([
+            'reason' => ['required', 'in:ended,error'],
+            'code' => ['nullable', 'integer'],
+            'video_id' => ['nullable', 'string'],
+        ]);
+        $itemId = $this->itemId($request);
+
+        // A blocked upload shouldn't cost the singer their turn: try another
+        // upload of the same song. Looked up before taking the room lock.
+        // Reports name the video too, so a late one about a swapped-out video does nothing.
+        if ($data['reason'] === 'error' && isset($data['video_id']) && in_array((int) ($data['code'] ?? 0), self::UNPLAYABLE, true)) {
+            $item = $room->current_queue_item_id === $itemId ? $room->queueItems()->find($itemId) : null;
+            if ($item?->youtube_video_id !== $data['video_id']) {
+                return response()->noContent(); // About an old song or video.
+            }
+
+            $youtube->block($item->youtube_video_id);
+
+            $video = $item->video_swaps < self::MAX_SWAPS ? $alternatives->find($item) : null;
+            if ($video !== null) {
+                $this->queue->replaceVideo($room, $itemId, $item->youtube_video_id, $video);
+
+                return response()->noContent();
+            }
+        }
 
         $this->queue->advance(
             $room,
-            $this->itemId($request),
-            $reason === 'error' ? QueueItemStatus::Failed : QueueItemStatus::Played,
+            $itemId,
+            $data['reason'] === 'error' ? QueueItemStatus::Failed : QueueItemStatus::Played,
         );
 
         return response()->noContent();

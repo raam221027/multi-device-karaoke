@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -21,6 +22,9 @@ class YouTube
 
     private const CACHE_HOURS = 24;
 
+    /** Karaoke channels without "karaoke" in their name (lowercase). */
+    private const KARAOKE_CHANNELS = ['sing king', 'karafun', 'singsongs', 'zoom karaoke official', 'sing2piano'];
+
     /**
      * @return list<array{id: string, title: string, channel_title: string|null, thumbnail_url: string|null, duration_seconds: int|null}>
      */
@@ -29,7 +33,7 @@ class YouTube
         $normalized = Str::of($query)->lower()->squish()->value();
         $q = $karaoke && ! str_contains($normalized, 'karaoke') ? "{$normalized} karaoke" : $normalized;
 
-        return Cache::remember('youtube:search:'.sha1($q), now()->addHours(self::CACHE_HOURS), function () use ($q) {
+        return $this->playable(Cache::remember('youtube:search:v2:'.sha1($q), now()->addHours(self::CACHE_HOURS), function () use ($q) {
             $ids = $this->get('/search', [
                 'part' => 'snippet',
                 'type' => 'video',
@@ -39,7 +43,7 @@ class YouTube
             ])->pluck('id.videoId')->filter()->values()->all();
 
             return $this->videos($ids);
-        });
+        }));
     }
 
     /**
@@ -52,9 +56,9 @@ class YouTube
      */
     public function popular(): array
     {
-        $cached = Cache::get('youtube:popular:v2');
+        $cached = Cache::get('youtube:popular:v3');
         if ($cached !== null) {
-            return $cached;
+            return $this->playable($cached);
         }
 
         try {
@@ -75,15 +79,88 @@ class YouTube
             ->values()
             ->all();
 
-        Cache::put('youtube:popular:v2', $songs, now()->addDays(7));
+        Cache::put('youtube:popular:v3', $songs, now()->addDays(7));
 
-        return $songs;
+        return $this->playable($songs);
     }
 
-    /** Metadata for one embeddable video, or null if it doesn't exist. */
+    /** Metadata for one embeddable video, or null if it doesn't exist or won't play here. */
     public function video(string $id): ?array
     {
+        if ($this->isBlocked($id)) {
+            return null;
+        }
+
         return Cache::remember('youtube:video:'.$id, now()->addHours(self::CACHE_HOURS), fn () => $this->videos([$id])[0] ?? null);
+    }
+
+    /**
+     * Remember a video whose owner blocks playback on other sites. The API
+     * still calls these embeddable; only the player finds out, so the display
+     * reports them and they're hidden from then on.
+     */
+    public function block(string $id): void
+    {
+        Cache::put('youtube:blocked:'.$id, true, now()->addDays(30));
+    }
+
+    public function isBlocked(string $id): bool
+    {
+        return Cache::has('youtube:blocked:'.$id);
+    }
+
+    /** Remember a video that really started on a TV, so it ranks first from then on. */
+    public function markPlayable(string $id): void
+    {
+        Cache::put('youtube:playable:'.$id, true, now()->addDays(30));
+    }
+
+    public function isPlayable(string $id): bool
+    {
+        return Cache::has('youtube:playable:'.$id);
+    }
+
+    /**
+     * Drop blocked videos and put the ones likely to play on the TV first.
+     * Runs on every read, so lists cached earlier pick up what the TVs have
+     * learned since. Ties keep YouTube's relevance order.
+     */
+    private function playable(array $videos): array
+    {
+        $videos = array_values(array_filter($videos, fn ($video) => ! $this->isBlocked($video['id'])));
+        $scores = array_map(fn ($video) => $this->score($video), $videos);
+        array_multisort($scores, SORT_DESC, array_keys($videos), SORT_ASC, $videos);
+
+        return array_map(fn ($video) => Arr::except($video, ['licensed', 'restricted']), $videos);
+    }
+
+    /**
+     * How likely a video is to play embedded. The API calls them all
+     * embeddable, but label uploads (VEVO, "- Topic", official channels)
+     * often refuse other sites, while karaoke channels rarely do.
+     */
+    private function score(array $video): int
+    {
+        $channel = mb_strtolower((string) ($video['channel_title'] ?? ''));
+        $score = 0;
+
+        if ($this->isPlayable($video['id'])) {
+            $score += 100;
+        }
+        if (str_contains($channel, 'karaoke') || in_array($channel, self::KARAOKE_CHANNELS, true)) {
+            $score += 20;
+        }
+        if (preg_match('/\b(karaoke|instrumental)\b/iu', $video['title'])) {
+            $score += 10;
+        }
+        if (($video['licensed'] ?? false) && preg_match('/vevo$| - topic$|official/u', $channel)) {
+            $score -= 50;
+        }
+        if ($video['restricted'] ?? false) {
+            $score -= 30;
+        }
+
+        return $score;
     }
 
     /** @param  list<string>  $ids */
@@ -98,6 +175,8 @@ class YouTube
             'id' => implode(',', $ids),
         ])
             ->filter(fn ($v) => $v['status']['embeddable'] ?? true)
+            // Age-restricted videos never play embedded.
+            ->reject(fn ($v) => ($v['contentDetails']['contentRating']['ytRating'] ?? null) === 'ytAgeRestricted')
             ->map(fn ($v) => [
                 'id' => $v['id'],
                 'title' => html_entity_decode($v['snippet']['title'] ?? '', ENT_QUOTES),
@@ -105,6 +184,9 @@ class YouTube
                 'thumbnail_url' => $v['snippet']['thumbnails']['medium']['url']
                     ?? $v['snippet']['thumbnails']['default']['url'] ?? null,
                 'duration_seconds' => self::parseDuration($v['contentDetails']['duration'] ?? null),
+                // Ranking hints, stripped before results leave the server.
+                'licensed' => (bool) ($v['contentDetails']['licensedContent'] ?? false),
+                'restricted' => isset($v['contentDetails']['regionRestriction']),
             ])->values()->all();
     }
 

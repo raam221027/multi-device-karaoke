@@ -8,6 +8,8 @@ use App\Services\YouTube;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Random\Engine\Mt19937;
+use Random\Randomizer;
 
 /** Songs to offer on the search screen before anyone types. */
 class SuggestionController extends Controller
@@ -19,6 +21,12 @@ class SuggestionController extends Controller
         Gate::authorize('search', $room);
 
         $pool = $youtube->popular();
+
+        // Each visit sends its own seed, so the list opens on different songs
+        // every time while "More" still pages through one stable order.
+        if ($request->filled('seed')) {
+            $pool = (new Randomizer(new Mt19937($request->integer('seed'))))->shuffleArray($pool);
+        }
 
         // "More" walks through the pool a page at a time and wraps back to the start.
         $pages = max(1, (int) ceil(count($pool) / self::PER_PAGE));

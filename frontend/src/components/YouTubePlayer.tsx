@@ -67,7 +67,8 @@ export default function YouTubePlayer({
   videoId: string
   paused: boolean
   onStarted: (itemId: number) => void
-  onEnded: (itemId: number, reason: 'ended' | 'error') => void
+  /** On an error, `code` is the player's error and `videoId` the upload that failed. */
+  onEnded: (itemId: number, reason: 'ended' | 'error', error?: { code: number; videoId: string }) => void
 }) {
   const host = useRef<HTMLDivElement>(null)
   // Set once the player is ready; its methods don't exist before that.
@@ -79,7 +80,9 @@ export default function YouTubePlayer({
     latest.current = { itemId, videoId, paused, onStarted, onEnded }
   })
   const loadedItem = useRef(itemId)
-  const reportedStart = useRef<number | null>(null)
+  // The server can swap in another upload of the same song, so the video can change under one item.
+  const loadedVideo = useRef(videoId)
+  const reportedStart = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -99,8 +102,9 @@ export default function YouTubePlayer({
             if (cancelled) return
             player.current = e.target
             // The song may have changed while the player was loading.
-            if (loadedItem.current !== latest.current.itemId) {
+            if (loadedItem.current !== latest.current.itemId || loadedVideo.current !== latest.current.videoId) {
               loadedItem.current = latest.current.itemId
+              loadedVideo.current = latest.current.videoId
               e.target.loadVideoById(latest.current.videoId)
             }
             if (latest.current.paused) e.target.pauseVideo()
@@ -108,14 +112,15 @@ export default function YouTubePlayer({
           },
           onStateChange: (e) => {
             const id = loadedItem.current
-            if (e.data === PLAYING && reportedStart.current !== id) {
-              reportedStart.current = id
+            const key = `${id}:${loadedVideo.current}`
+            if (e.data === PLAYING && reportedStart.current !== key) {
+              reportedStart.current = key
               latest.current.onStarted(id)
             }
             if (e.data === ENDED) latest.current.onEnded(id, 'ended')
           },
-          // Embedding disabled, removed video, etc.: move on rather than stall the party.
-          onError: () => latest.current.onEnded(loadedItem.current, 'error'),
+          // Embedding disabled, removed video, etc.: the server tries another upload or moves on.
+          onError: (e) => latest.current.onEnded(loadedItem.current, 'error', { code: e.data, videoId: loadedVideo.current }),
         },
       })
     })
@@ -129,8 +134,9 @@ export default function YouTubePlayer({
   }, [])
 
   useEffect(() => {
-    if (loadedItem.current === itemId || !player.current) return
+    if ((loadedItem.current === itemId && loadedVideo.current === videoId) || !player.current) return
     loadedItem.current = itemId
+    loadedVideo.current = videoId
     player.current.loadVideoById(videoId)
   }, [itemId, videoId])
 

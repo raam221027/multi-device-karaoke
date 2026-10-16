@@ -10,7 +10,9 @@ import JoinPage from './pages/JoinPage.tsx'
 import ScanPage from './pages/ScanPage.tsx'
 import ClosePage from './pages/host/ClosePage.tsx'
 import GuestsPage from './pages/host/GuestsPage.tsx'
+import BecomeScreenPage from './pages/host/BecomeScreenPage.tsx'
 import InvitePage from './pages/host/InvitePage.tsx'
+import MakeHostPage from './pages/host/MakeHostPage.tsx'
 import RemoveGuestPage from './pages/host/RemoveGuestPage.tsx'
 import SettingsPage from './pages/host/SettingsPage.tsx'
 import TvInvitePage from './pages/host/TvInvitePage.tsx'
@@ -47,8 +49,10 @@ createRoot(document.getElementById('root')!).render(
             {songRoutes}
             <Route path="invite" element={<InvitePage />} />
             <Route path="invite/tv" element={<TvInvitePage />} />
+            <Route path="invite/tv/this-device" element={<BecomeScreenPage />} />
             <Route path="guests" element={<GuestsPage />} />
             <Route path="guests/:participantId/remove" element={<RemoveGuestPage />} />
+            <Route path="guests/:participantId/make-host" element={<MakeHostPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="close" element={<ClosePage />} />
           </Route>

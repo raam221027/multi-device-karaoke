@@ -137,11 +137,13 @@ export default function SettingsPage() {
       <section className="flex flex-col gap-3">
         <SectionHeading title="Playback" />
         <p className="text-[12px] leading-[1.45] text-muted">
-          Videos play on your TV display. Keep that browser tab open and the screen awake. The TV may need one tap to
-          start the sound.
+          Videos play on one screen: a TV, laptop, tablet or spare phone. Keep that browser tab open and the screen
+          awake; it may need one tap to start the sound. Connecting another screen moves playback there.
         </p>
         <ButtonLink to={`${base}/invite/tv`} variant="secondary" icon={icons.monitorSettings}>
-          {state.display_connected ? 'TV display connected' : 'Set up TV display'}
+          {state.display_connected
+            ? 'Switch display'
+            : 'Set up a display'}
         </ButtonLink>
       </section>
 

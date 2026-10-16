@@ -1,25 +1,30 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
 import YouTubePlayer from '../components/YouTubePlayer'
-import { Button, ErrorText, Icon, TextInput } from '../components/ui'
-import { ApiError } from '../lib/api'
+import { Button, ButtonLink, ErrorText, Icon, TextInput } from '../components/ui'
+import { ApiError, getToken } from '../lib/api'
 import {
+  clearDisplayEnded,
   connectDisplay,
+  currentPhone,
+  displayBecomesPhone,
   disconnectDisplay,
+  displayEnded,
   getDisplaySession,
   getDisplayState,
+  markDisplayEnded,
   reportEnded,
   reportStarted,
   setDisplaySession,
   type DisplaySession,
 } from '../lib/display'
 import { songName } from '../lib/format'
-import { errorMessage, normalizeCode } from '../lib/rooms'
+import { errorMessage, getMe, normalizeCode } from '../lib/rooms'
 import { joinUrl, publicHost } from '../lib/share'
-import type { RoomState } from '../lib/types'
+import type { QueueItem, RoomState } from '../lib/types'
 
 // The TV reacts to pause/skip from phones, so it polls faster than phones do.
 const POLL_MS = 2000
@@ -147,15 +152,31 @@ function useWakeLock(active: boolean) {
   }, [active])
 }
 
-function ConnectScreen({ notice, onConnected }: { notice?: string; onConnected: (s: DisplaySession) => void }) {
+function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; onConnected: (s: DisplaySession) => void }) {
+  // This device was the screen until recently (maybe before a reload).
+  const ended = displayEnded()
+  const notice =
+    endNotice ?? (ended ? 'This screen was disconnected. Enter the room code to join again.' : undefined)
   // The host's display QR opens /display?code=…, so a phone only has to tap Connect.
   const [params] = useSearchParams()
   const prefilled = normalizeCode(params.get('code') ?? '')
   const [code, setCode] = useState(prefilled)
   const connect = useMutation({ mutationFn: () => connectDisplay(normalizeCode(code)), onSuccess: onConnected })
+  const navigate = useNavigate()
+  // A screen that was replaced may only want back in as a singer, so ask
+  // before taking the screen back. Fresh setups connect directly.
+  const [choosing, setChoosing] = useState(false)
+
+  // A phone that's hosting can't also be the screen, or the room would lose
+  // its remote. It hands off hosting first, from its own screen page.
+  // Keyed by token so an answer cached for an earlier session never applies to this one.
+  const phoneToken = getToken()
+  const phone = useQuery({ queryKey: ['me', phoneToken], queryFn: getMe, enabled: phoneToken !== null, retry: false })
+  const hosting = phoneToken && phone.data?.participant.role === 'host' ? phone.data.room : null
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
+    if (ended) return setChoosing(true)
     fillTouchScreen()
     connect.mutate()
   }
@@ -172,28 +193,68 @@ function ConnectScreen({ notice, onConnected }: { notice?: string; onConnected: 
         phone or the Invite page.
       </p>
       {notice && <p className="rounded-xl bg-surface p-3 text-[13px] text-muted">{notice}</p>}
-      {prefilled && !notice && (
-        <p className="rounded-xl bg-surface p-3 text-[13px] text-muted">
-          Connecting will replace any screen already in this room.
-        </p>
+      {hosting ? (
+        <>
+          <p className="rounded-xl bg-surface p-3 text-[13px] leading-[1.45] text-muted">
+            This phone is hosting {hosting.name ?? 'a room'}. Hand off hosting to a guest before using it as the
+            screen, so the room always has a host.
+          </p>
+          <ButtonLink to={`/host/${hosting.id}/invite/tv/this-device`}>Hand off hosting</ButtonLink>
+          <ButtonLink to={`/host/${hosting.id}`} variant="secondary">
+            Back to my room
+          </ButtonLink>
+        </>
+      ) : choosing ? (
+        <div className="flex flex-col gap-2.5">
+          <p className="text-[15px] font-semibold">
+            How do you want to join room <span className="tracking-[0.08em]">{normalizeCode(code)}</span>?
+          </p>
+          <Button onClick={() => navigate(`/join/${normalizeCode(code)}`)} disabled={connect.isPending}>
+            Join as a singer
+          </Button>
+          <Button
+            variant="secondary"
+            icon={icons.monitor}
+            onClick={() => {
+              fillTouchScreen()
+              connect.mutate()
+            }}
+            disabled={connect.isPending}
+          >
+            {connect.isPending ? 'Connecting…' : 'Use as the display'}
+          </Button>
+          <p className="text-center text-[12px] text-muted">Using it as the display replaces the screen that’s playing now.</p>
+          <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
+          <button type="button" onClick={() => setChoosing(false)} className="py-1 text-[13px] text-accent">
+            Change code
+          </button>
+        </div>
+      ) : (
+        <>
+          {prefilled && !notice && (
+            <p className="rounded-xl bg-surface p-3 text-[13px] text-muted">
+              Connecting will replace any screen already in this room.
+            </p>
+          )}
+          <form onSubmit={onSubmit} className="flex flex-col gap-2.5">
+            <TextInput
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Room code"
+              aria-label="Room code"
+              autoCapitalize="characters"
+              autoComplete="off"
+              maxLength={8}
+              autoFocus
+              className="text-center font-bold tracking-[0.3em] uppercase"
+            />
+            <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
+            <Button type="submit" icon={icons.plusOnAccent} disabled={normalizeCode(code).length !== 6 || connect.isPending}>
+              {connect.isPending ? 'Connecting…' : 'Connect'}
+            </Button>
+          </form>
+        </>
       )}
-      <form onSubmit={onSubmit} className="flex flex-col gap-2.5">
-        <TextInput
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Room code"
-          aria-label="Room code"
-          autoCapitalize="characters"
-          autoComplete="off"
-          maxLength={8}
-          autoFocus
-          className="text-center font-bold tracking-[0.3em] uppercase"
-        />
-        <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
-        <Button type="submit" icon={icons.plusOnAccent} disabled={normalizeCode(code).length !== 6 || connect.isPending}>
-          {connect.isPending ? 'Connecting…' : 'Connect'}
-        </Button>
-      </form>
     </main>
   )
 }
@@ -249,10 +310,26 @@ function Invitation({ state, onDisconnect }: { state: RoomState; onDisconnect: (
   )
 }
 
+/** True for a few seconds after the server swaps in another upload of the current song. */
+function useSwapNotice(current: QueueItem): boolean {
+  const [shownFor, setShownFor] = useState<string | null>(null)
+  const key = current.video_swaps > 0 ? `${current.id}:${current.youtube_video_id}` : null
+
+  useEffect(() => {
+    if (!key) return
+    setShownFor(key)
+    const timer = setTimeout(() => setShownFor(null), 8000)
+    return () => clearTimeout(timer)
+  }, [key])
+
+  return key !== null && shownFor === key
+}
+
 function NowPlaying({ state, session }: { state: RoomState; session: DisplaySession }) {
   const current = state.queue.current!
   const next = state.queue.upcoming[0]
   const paused = state.room.playback_status === 'paused'
+  const swapNotice = useSwapNotice(current)
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-black">
@@ -261,7 +338,7 @@ function NowPlaying({ state, session }: { state: RoomState; session: DisplaySess
         videoId={current.youtube_video_id}
         paused={paused}
         onStarted={(id) => void reportStarted(session, id).catch(() => {})}
-        onEnded={(id, reason) => void reportEnded(session, id, reason).catch(() => {})}
+        onEnded={(id, reason, error) => void reportEnded(session, id, reason, error).catch(() => {})}
       />
       {/* Taps inside the video iframe never reach this page (and would pause it behind the host's back), so catch them here. */}
       <div className="absolute inset-0" />
@@ -280,6 +357,11 @@ function NowPlaying({ state, session }: { state: RoomState; session: DisplaySess
           <p className="text-[length:max(13px,1.4vw)] font-semibold text-accent">ON THE MIC</p>
           <p className="text-[length:max(20px,2.6vw)] font-bold">{current.added_by.display_name}</p>
           <p className="text-[length:max(13px,1.4vw)] text-muted">{songName(current)}</p>
+          {swapNotice && (
+            <p className="mt-1 w-fit rounded-full bg-bg/85 px-3 py-1 text-[length:max(12px,1.1vw)] text-muted">
+              The chosen video can’t play here, so this is another version.
+            </p>
+          )}
         </div>
         {next && (
           <div className="flex max-w-[40vw] flex-col items-end gap-1 text-right">
@@ -305,22 +387,42 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
   onEnd: (notice: string) => void
 }) {
   const state = useQuery({
-    queryKey: ['display', session.roomId],
+    // Keyed by token: a screen replaced earlier in this room leaves a cached
+    // 401 behind, which would otherwise end the new connection straight away.
+    queryKey: ['display', session.roomId, session.token],
     queryFn: () => getDisplayState(session),
     refetchInterval: POLL_MS,
     retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 3,
+    // A device keeps its token through role changes, so an answer cached from
+    // an earlier stint as the screen ("you're a guest now") must never be reused.
+    gcTime: 0,
   })
 
   useWakeLock(armed)
 
-  const gone = state.error instanceof ApiError && [401, 403, 404].includes(state.error.status)
+  // Only a fresh answer may end or redirect the screen, never a cached one.
+  const fresh = state.isFetchedAfterMount
+  const gone = fresh && state.error instanceof ApiError && [401, 403, 404].includes(state.error.status)
   useEffect(() => {
-    if (gone) onEnd('The room closed or this screen was disconnected by the host.')
+    if (gone) onEnd('Another screen took over, the host disconnected this one, or the room closed.')
   }, [gone, onEnd])
 
-  if (gone) return null
+  // The host handed this screen the host role (a swap): same token, now a phone.
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const role = state.data?.me.role
+  const becamePhone = fresh && role !== undefined && role !== 'display'
+  useEffect(() => {
+    if (!becamePhone) return
+    displayBecomesPhone(session)
+    // If this browser was a phone in this room before, its cached state still
+    // says "display" and would bounce it straight back here.
+    queryClient.removeQueries({ queryKey: ['room', String(session.roomId)] })
+    if (fullscreenElement()) exitFullscreen()
+    navigate(`/${role === 'host' ? 'host' : 'room'}/${session.roomId}`, { replace: true })
+  }, [becamePhone, role, session, navigate, queryClient])
 
-  if (!state.data) return <p className="p-6 text-center text-muted">Connecting…</p>
+  if (gone || becamePhone || !fresh || !state.data) return <p className="p-6 text-center text-muted">Connecting…</p>
 
   // Browsers block sound until someone interacts with the page.
   if (!armed) {
@@ -359,6 +461,8 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
 /** The TV / laptop screen: plays the room's videos and shows the invite between songs. */
 export default function DisplayPage() {
   const [session, setSession] = useState(getDisplaySession)
+  const [, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   // Connecting is a tap, so a fresh connection can play sound right away.
   const [armed, setArmed] = useState(false)
   const [notice, setNotice] = useState<string>()
@@ -381,9 +485,23 @@ export default function DisplayPage() {
       armed={armed}
       onArm={() => setArmed(true)}
       onEnd={(message) => {
+        // Show the connect screen straight away; never leave a blank page.
+        const ended = session
         setDisplaySession(null)
+        markDisplayEnded()
+        // The QR's ?code= would otherwise come back prefilled and invite reconnecting.
+        setSearchParams({}, { replace: true })
         setSession(null)
         setNotice(message)
+
+        // Still a phone in this same room (it was a guest and the screen at
+        // once)? Go back to that instead. A session from another room is ignored.
+        void currentPhone().then((phone) => {
+          if (!phone || phone.room.id !== ended.roomId || phone.room.status !== 'open') return
+          if (phone.participant.role === 'display') return
+          clearDisplayEnded()
+          navigate(`/${phone.participant.role === 'host' ? 'host' : 'room'}/${phone.room.id}`, { replace: true })
+        })
       }}
     />
   )

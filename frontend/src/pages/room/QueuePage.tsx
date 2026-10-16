@@ -97,7 +97,10 @@ export default function QueuePage() {
           <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
             <p className="truncate text-[15px] font-bold">{songName(queue.current)}</p>
             <p className="truncate text-[12px] text-muted">
-              {[songArtist(queue.current), queue.current.added_by.id === me.id ? 'You' : queue.current.added_by.display_name]
+              {[
+                songArtist(queue.current),
+                queue.current.video_swaps > 0 && 'another version',
+                queue.current.added_by.id === me.id ? 'You' : queue.current.added_by.display_name]
                 .filter(Boolean)
                 .join(' · ')}
             </p>

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, getToken, setToken } from './api'
@@ -13,6 +13,7 @@ const POLL_MS = 4000
  */
 export function useRoomState(roomId: string | undefined) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const hasToken = getToken() !== null
 
   const query = useQuery({
@@ -29,8 +30,10 @@ export function useRoomState(roomId: string | undefined) {
   useEffect(() => {
     if (!ended) return
     setToken(null)
+    // Drop the failed state, or rejoining this room later would hit it and bounce home again.
+    queryClient.removeQueries({ queryKey: ['room', roomId] })
     navigate('/', { replace: true, state: { notice: 'That room has ended or you are no longer in it.' } })
-  }, [ended, navigate])
+  }, [ended, navigate, queryClient, roomId])
 
   return query
 }

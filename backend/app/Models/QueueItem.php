@@ -21,6 +21,7 @@ class QueueItem extends Model
         'channel_title',
         'thumbnail_url',
         'duration_seconds',
+        'video_swaps',
         'position',
         'status',
         'started_at',
@@ -36,6 +37,7 @@ class QueueItem extends Model
         return [
             'status' => QueueItemStatus::class,
             'duration_seconds' => 'integer',
+            'video_swaps' => 'integer',
             'position' => 'integer',
             'started_at' => 'datetime',
             'ended_at' => 'datetime',

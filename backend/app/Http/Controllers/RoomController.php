@@ -86,7 +86,8 @@ class RoomController extends Controller
 
     /**
      * A TV or laptop browser connects by room code and becomes the room's
-     * display. Only one display at a time: a new one replaces the old.
+     * display. Only one display at a time: a new one replaces the old, which
+     * is how the host switches screens.
      */
     public function joinAsDisplay(DisplayJoinRequest $request): JsonResponse
     {
@@ -94,30 +95,97 @@ class RoomController extends Controller
 
         abort_if($room->is_locked, 423, 'This room is locked. Ask the host to allow guests to join.');
 
-        $display = DB::transaction(function () use ($room) {
-            $old = $room->participants()
-                ->where('role', ParticipantRole::Display)
-                ->where('status', ParticipantStatus::Approved)
-                ->get();
-
-            foreach ($old as $previous) {
-                $previous->update(['status' => ParticipantStatus::Kicked]);
-                $previous->tokens()->delete();
-            }
-
-            $display = $room->participants()->create([
-                'role' => ParticipantRole::Display,
-                'display_name' => 'TV display',
-                'status' => ParticipantStatus::Approved,
-                'can_add_songs' => false,
-            ]);
-
+        $display = DB::transaction(function () use ($room, $request) {
+            $display = $this->replaceDisplay($room, $request->input('device'));
             $room->bumpVersion();
 
             return $display;
         });
 
         return $this->session($room->refresh(), $display, 201);
+    }
+
+    /**
+     * The host turns their own device into the screen. The room must never be
+     * without a host, so they name who takes over: a guest phone, or the
+     * current screen (a swap). Roles change in place and every device keeps
+     * its token, so nobody is disconnected; each device sees its new role on
+     * its next poll and moves to the matching page. Any other screen is
+     * retired (see Room::retireDisplays).
+     */
+    public function becomeDisplay(Request $request, Room $room): Response
+    {
+        Gate::authorize('manage', $room);
+
+        $data = $request->validate(['participant_id' => ['required', 'integer']]);
+
+        $next = $room->participants()
+            ->whereKey($data['participant_id'])
+            ->where('status', ParticipantStatus::Approved)
+            ->firstOr(fn () => abort(404));
+        abort_if($next->isHost(), 422, 'Pick a guest or the screen to take over as host.');
+
+        /** @var Participant $host */
+        $host = $request->user();
+
+        DB::transaction(function () use ($room, $host, $next) {
+            Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
+
+            $room->retireDisplays(except: $next);
+
+            // A screen that joined by code becomes a person, named after its device ("PC").
+            if ($next->isScreenOnly()) {
+                $next->update(['can_add_songs' => true, 'device' => null]);
+            }
+            $next->assignRole(ParticipantRole::Host);
+
+            // Keeps its name, so its queued songs still say who's singing.
+            $host->assignRole(ParticipantRole::Display);
+
+            $room->bumpVersion();
+        });
+
+        return response()->noContent();
+    }
+
+    /**
+     * A guest's phone connects as the screen. It becomes the display in place
+     * (same token) rather than joining a second time, so one device is never
+     * two participants that a later handoff could tell apart.
+     */
+    public function useAsDisplay(Request $request, Room $room): Response
+    {
+        Gate::authorize('leave', $room);
+
+        /** @var Participant $me */
+        $me = $request->user();
+        abort_unless($me->isGuest(), 422, 'Only a guest\'s phone can become the display.');
+
+        DB::transaction(function () use ($room, $me) {
+            Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
+
+            $room->retireDisplays(except: $me);
+            $me->assignRole(ParticipantRole::Display);
+
+            $room->bumpVersion();
+        });
+
+        return response()->noContent();
+    }
+
+    /** Only one display at a time: retire the current one and create its replacement. */
+    private function replaceDisplay(Room $room, ?string $device): Participant
+    {
+        $room->retireDisplays();
+        $device ??= 'Screen';
+
+        return $room->participants()->create([
+            'role' => ParticipantRole::Display,
+            'display_name' => $device,
+            'device' => $device,
+            'status' => ParticipantStatus::Approved,
+            'can_add_songs' => false,
+        ]);
     }
 
     public function update(UpdateRoomRequest $request, Room $room): RoomResource

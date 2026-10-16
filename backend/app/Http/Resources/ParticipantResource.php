@@ -15,6 +15,7 @@ class ParticipantResource extends JsonResource
             'id' => $this->id,
             'room_id' => $this->room_id,
             'display_name' => $this->display_name,
+            'device' => $this->device,
             'role' => $this->role,
             'status' => $this->status,
             'can_add_songs' => $this->can_add_songs,

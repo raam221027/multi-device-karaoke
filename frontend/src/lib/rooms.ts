@@ -1,5 +1,15 @@
 import { ApiError, api, setToken } from './api'
-import type { CodeLookup, Me, QueueItem, RoomSettings, RoomState, Session, Suggestions, Video } from './types'
+import type {
+  CodeLookup,
+  Me,
+  QueueItem,
+  RoomSettings,
+  RoomState,
+  SearchSuggestion,
+  Session,
+  Suggestions,
+  Video,
+} from './types'
 
 function post<T>(path: string, body?: unknown): Promise<T> {
   return api<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
@@ -58,6 +68,16 @@ export async function removeParticipant(roomId: number, participantId: number): 
   await send('DELETE', `/rooms/${roomId}/participants/${participantId}`)
 }
 
+/** Hand the room to a guest. This phone stays in as a guest; neither phone needs a new token. */
+export async function makeHost(roomId: number, participantId: number): Promise<void> {
+  await post<null>(`/rooms/${roomId}/participants/${participantId}/make-host`)
+}
+
+/** Turn a guest's phone into the screen. It keeps its token and switches pages on its next poll. */
+export async function makeDisplay(roomId: number, participantId: number): Promise<void> {
+  await post<null>(`/rooms/${roomId}/participants/${participantId}/make-display`)
+}
+
 // Songs: the host sings like anyone else, so these are shared by every phone.
 
 export async function searchSongs(roomId: number, q: string, karaoke: boolean): Promise<Video[]> {
@@ -66,8 +86,17 @@ export async function searchSongs(roomId: number, q: string, karaoke: boolean): 
 }
 
 /** Songs to offer before anyone types: this room's earlier songs and popular karaoke. */
-export async function getSuggestions(roomId: number, page = 0): Promise<Suggestions> {
-  return api<Suggestions>(`/rooms/${roomId}/suggestions?page=${page}`)
+export async function getSuggestions(roomId: number, page = 0, seed?: number): Promise<Suggestions> {
+  const shuffle = seed === undefined ? '' : `&seed=${seed}`
+  return api<Suggestions>(`/rooms/${roomId}/suggestions?page=${page}${shuffle}`)
+}
+
+/** Songs and artists matching what's typed so far (from iTunes, so no YouTube quota). */
+export async function getAutocomplete(roomId: number, q: string): Promise<SearchSuggestion[]> {
+  const data = await api<{ suggestions: SearchSuggestion[] }>(
+    `/rooms/${roomId}/autocomplete?q=${encodeURIComponent(q)}`,
+  )
+  return data.suggestions
 }
 
 export async function addSong(roomId: number, videoId: string): Promise<QueueItem> {

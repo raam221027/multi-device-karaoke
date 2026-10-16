@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ParticipantRole;
+use App\Enums\ParticipantStatus;
 use App\Enums\PlaybackStatus;
 use App\Enums\QueueItemStatus;
 use App\Enums\RoomStatus;
@@ -110,6 +111,30 @@ class Room extends Model
     public function bumpVersion(): void
     {
         $this->increment('version');
+    }
+
+    /**
+     * Make way for a new display. A screen that joined by code has nobody
+     * behind it, so it's disconnected. A phone that was the screen goes back
+     * to being a guest phone, keeping its token and name. Call inside the
+     * change's transaction.
+     */
+    public function retireDisplays(?Participant $except = null): void
+    {
+        $displays = $this->participants()
+            ->where('role', ParticipantRole::Display)
+            ->where('status', ParticipantStatus::Approved)
+            ->when($except, fn ($query) => $query->whereKeyNot($except->id))
+            ->get();
+
+        foreach ($displays as $display) {
+            if ($display->isScreenOnly()) {
+                $display->update(['status' => ParticipantStatus::Kicked]);
+                $display->tokens()->delete();
+            } else {
+                $display->assignRole(ParticipantRole::Guest);
+            }
+        }
     }
 
     /** Revoke every device session in this room. */

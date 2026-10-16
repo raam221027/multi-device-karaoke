@@ -30,20 +30,36 @@ class YouTube
      */
     public function search(string $query, bool $karaoke = true): array
     {
+        return $this->searchPage($query, $karaoke)['videos'];
+    }
+
+    /**
+     * One page of search results, plus the token for the next page (null on
+     * the last). Each page is its own search.list call, cached separately.
+     *
+     * @return array{videos: list<array{id: string, title: string, channel_title: string|null, thumbnail_url: string|null, duration_seconds: int|null}>, next: string|null}
+     */
+    public function searchPage(string $query, bool $karaoke = true, ?string $pageToken = null): array
+    {
         $normalized = Str::of($query)->lower()->squish()->value();
         $q = $karaoke && ! str_contains($normalized, 'karaoke') ? "{$normalized} karaoke" : $normalized;
+        $key = 'youtube:search:v3:'.sha1($q.'|'.($pageToken ?? ''));
 
-        return $this->playable(Cache::remember('youtube:search:v2:'.sha1($q), now()->addHours(self::CACHE_HOURS), function () use ($q) {
-            $ids = $this->get('/search', [
+        $page = Cache::remember($key, now()->addHours(self::CACHE_HOURS), function () use ($q, $pageToken) {
+            $json = $this->request('/search', array_filter([
                 'part' => 'snippet',
                 'type' => 'video',
                 'videoEmbeddable' => 'true',
                 'maxResults' => 12,
                 'q' => $q,
-            ])->pluck('id.videoId')->filter()->values()->all();
+                'pageToken' => $pageToken,
+            ]));
+            $ids = collect($json['items'] ?? [])->pluck('id.videoId')->filter()->values()->all();
 
-            return $this->videos($ids);
-        }));
+            return ['videos' => $this->videos($ids), 'next' => $json['nextPageToken'] ?? null];
+        });
+
+        return ['videos' => $this->playable($page['videos']), 'next' => $page['next']];
     }
 
     /**
@@ -192,8 +208,13 @@ class YouTube
 
     private function get(string $path, array $query): Collection
     {
+        return collect($this->request($path, $query)['items'] ?? []);
+    }
+
+    private function request(string $path, array $query): array
+    {
         try {
-            return $this->client()->get($path, $query)->throw()->collect('items');
+            return $this->client()->get($path, $query)->throw()->json() ?? [];
         } catch (ConnectionException|RequestException $e) {
             report($e);
             abort(502, 'YouTube search is unavailable right now. Try again in a moment.');

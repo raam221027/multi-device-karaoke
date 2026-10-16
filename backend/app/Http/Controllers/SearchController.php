@@ -18,7 +18,11 @@ class SearchController extends Controller
         $data = $request->validate([
             'q' => ['required', 'string', 'min:2', 'max:80'],
             'karaoke' => ['sometimes', 'boolean'],
+            // YouTube's nextPageToken from the previous page, passed back as-is.
+            'page' => ['sometimes', 'nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
+
+        $page = $youtube->searchPage($data['q'], $request->boolean('karaoke', true), $data['page'] ?? null);
 
         return response()->json([
             // Titles come in both orders, so look up which half is the song (cached per title).
@@ -26,7 +30,8 @@ class SearchController extends Controller
                 $info = $songInfo->identify($video['title']);
 
                 return [...$video, 'song_title' => $info['song'] ?? null, 'artist' => $info['artist'] ?? null];
-            }, $youtube->search($data['q'], $request->boolean('karaoke', true))),
+            }, $page['videos']),
+            'next_page' => $page['next'],
         ]);
     }
 }

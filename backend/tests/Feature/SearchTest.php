@@ -51,6 +51,43 @@ it('caches results by normalized query', function () {
     Http::assertSentCount(2); // one search.list + one videos.list
 });
 
+it('pages through results with YouTube page tokens', function () {
+    config(['services.youtube.key' => 'test-key']);
+    Http::fake([
+        'www.googleapis.com/youtube/v3/search*' => fn ($request) => str_contains($request->url(), 'pageToken=PAGE2')
+            ? Http::response(['items' => [['id' => ['videoId' => 'bbbbbbbbbbb']]]])
+            : Http::response(['items' => [['id' => ['videoId' => 'aaaaaaaaaaa']]], 'nextPageToken' => 'PAGE2']),
+        'www.googleapis.com/youtube/v3/videos*' => function ($request) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return Http::response(['items' => array_map(fn ($id) => [
+                'id' => $id, 'snippet' => ['title' => "Song {$id}"], 'contentDetails' => ['duration' => 'PT3M'],
+            ], explode(',', $query['id']))]);
+        },
+        'itunes.apple.com/*' => Http::response(['results' => []]),
+    ]);
+
+    asDevice($this->guestToken)
+        ->getJson("/api/rooms/{$this->room->id}/search?q=ABBA")
+        ->assertOk()
+        ->assertJsonPath('results.0.id', 'aaaaaaaaaaa')
+        ->assertJsonPath('next_page', 'PAGE2');
+
+    asDevice($this->guestToken)
+        ->getJson("/api/rooms/{$this->room->id}/search?q=ABBA&page=PAGE2")
+        ->assertOk()
+        ->assertJsonPath('results.0.id', 'bbbbbbbbbbb')
+        ->assertJsonPath('next_page', null);
+});
+
+it('rejects a malformed page token', function () {
+    fakeYouTube();
+
+    asDevice($this->guestToken)
+        ->getJson("/api/rooms/{$this->room->id}/search?q=ABBA&page=".urlencode('a b/c'))
+        ->assertUnprocessable();
+});
+
 it('explains when search is not configured', function () {
     config(['services.youtube.key' => null]);
 

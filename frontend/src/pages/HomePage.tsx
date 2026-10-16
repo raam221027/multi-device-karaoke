@@ -154,6 +154,12 @@ export default function HomePage() {
           Scan QR to join
         </ButtonLink>
 
+        {/* No TV? A spare phone, tablet or laptop can play the videos instead. */}
+        <Link to="/display" className="flex items-center justify-center gap-2 py-1 text-[13px] text-accent">
+          <Icon src={icons.monitor} size={16} />
+          Use this device as the screen
+        </Link>
+
         <p className="text-center text-[12px] leading-[1.45] text-muted">No downloads. No accounts. No emails.</p>
       </div>
 

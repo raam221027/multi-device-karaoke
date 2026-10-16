@@ -45,7 +45,7 @@ export type QueueItem = {
 export type Video = {
   id: string
   title: string
-  /** On suggestions, from the server's catalogue lookup; search results only have the title. */
+  /** From the server's catalogue lookup; null when it couldn't tell which half is the song. */
   song_title?: string | null
   artist?: string | null
   channel_title: string | null

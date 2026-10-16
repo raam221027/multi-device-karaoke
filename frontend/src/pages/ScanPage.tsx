@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as icons from '../assets/icons'
 import { ButtonLink, Card, Icon } from '../components/ui'
-import { codeFromQr } from '../lib/rooms'
+import { codeFromQr, displayCodeFromQr } from '../lib/rooms'
 
 type CameraState = 'starting' | 'scanning' | { problem: string }
 
@@ -61,9 +61,14 @@ export default function ScanPage() {
       if (!qr) return
 
       const code = codeFromQr(qr.data)
+      const displayCode = displayCodeFromQr(qr.data)
       if (code) {
         stop()
         navigate(`/join/${code}`, { replace: true })
+      } else if (displayCode) {
+        // The host's "use a phone as the screen" QR: connect this device as the display.
+        stop()
+        navigate(`/display?code=${displayCode}`, { replace: true })
       } else {
         setWrongQr(true)
       }

@@ -26,6 +26,11 @@ export function joinUrl(code: string | null): string {
   return `${publicOrigin()}/join/${code ?? ''}`
 }
 
+/** Opens the display page with the code filled in, for a phone or tablet used as the screen. */
+export function displayUrl(code: string | null): string {
+  return `${publicOrigin()}/display?code=${encodeURIComponent(code ?? '')}`
+}
+
 /** True only when QR codes would point at an address phones can't reach. */
 export const isLocalhost = onLocalhost && publicOrigin() === window.location.origin
 

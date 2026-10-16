@@ -117,3 +117,11 @@ export function codeFromQr(text: string): string | null {
   const code = normalizeCode(fromUrl ? decodeURIComponent(fromUrl) : value)
   return /^[A-Z0-9]{6}$/.test(code) ? code : null
 }
+
+/** The code from a display QR (`/display?code=…`), or null for anything else. */
+export function displayCodeFromQr(text: string): string | null {
+  const match = text.trim().match(/^https?:\/\/[^/]+\/display\/?\?(?:[^#]*&)?code=([^&#]+)/i)?.[1]
+  if (!match) return null
+  const code = normalizeCode(decodeURIComponent(match))
+  return /^[A-Z0-9]{6}$/.test(code) ? code : null
+}

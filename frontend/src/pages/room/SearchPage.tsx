@@ -64,7 +64,7 @@ function ResultRow({
 }) {
   const parsed = parseSongTitle(video.title)
   const { isKaraoke } = parsed
-  // Suggestions carry the server's lookup; search results only have the title.
+  // The server says which half of the title is the song; the title parse is the fallback.
   const song = video.song_title ?? parsed.song
   const artist = video.song_title ? (video.artist ?? null) : parsed.artist
   const art = ARTWORK[index % ARTWORK.length]

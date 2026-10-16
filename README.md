@@ -63,6 +63,10 @@ cd backend  && php artisan test     # Pest; uses the karaoke_test database
 cd frontend && npm run build        # type-check + production build
 ```
 
+## Deploying
+
+See [docs/deploy.md](docs/deploy.md): any cheap Ubuntu VPS (Hetzner, DigitalOcean) or Oracle's free tier, with Caddy (HTTPS), PHP-FPM and MySQL. The sample config is in `deploy/`.
+
 ## Pushing to GitHub
 
 Create an **empty** repository on github.com (no README or .gitignore), then:

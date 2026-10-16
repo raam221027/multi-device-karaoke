@@ -1,0 +1,24 @@
+# One origin for everything, like the Vite dev proxy: the SPA calls /api and
+# /broadcasting on its own host. Caddy fetches and renews the TLS certificate.
+# Install: sudo cp deploy/Caddyfile /etc/caddy/Caddyfile, set DOMAIN below, sudo systemctl reload caddy
+
+karaoke-example.duckdns.org {
+	encode zstd gzip
+
+	@laravel path /api/* /broadcasting/* /up
+	handle @laravel {
+		root * /var/www/karaoke/backend/public
+		php_fastcgi unix//run/php/php8.3-fpm.sock
+	}
+
+	# Reverb WebSocket (Phase 3). Harmless until Reverb is running.
+	handle /app/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	handle {
+		root * /var/www/karaoke/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}

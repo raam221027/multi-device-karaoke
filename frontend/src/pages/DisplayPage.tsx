@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
 import YouTubePlayer from '../components/YouTubePlayer'
@@ -38,6 +38,9 @@ type WebkitDocument = Document & {
 const webkitDoc = document as WebkitDocument
 
 const isTouchScreen = () => navigator.maxTouchPoints > 0 || window.matchMedia('(any-pointer: coarse)').matches
+/** Opened from a Home Screen icon: already full screen, with no browser bars. */
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
 const fullscreenElement = () => document.fullscreenElement ?? webkitDoc.webkitFullscreenElement ?? null
 /** False on iPhones: their browsers never let a page go fullscreen. */
 const fullscreenSupported = () => !!(document.fullscreenEnabled || webkitDoc.webkitFullscreenEnabled)
@@ -62,6 +65,8 @@ function exitFullscreen() {
 
 // How long the fullscreen toggle stays up after a tap.
 const TOGGLE_MS = 3000
+// The Home Screen tip is longer, so it stays up long enough to read.
+const TIP_MS = 8000
 
 /**
  * A fullscreen toggle for a phone or tablet screen, hidden until someone taps.
@@ -72,16 +77,20 @@ function FullscreenToggle() {
   const [shown, setShown] = useState(false)
   // Where fullscreen isn't possible, the button explains the Home Screen route instead.
   const [tip, setTip] = useState(false)
+  const hideTimer = useRef<number | undefined>(undefined)
+
+  function hideAfter(ms: number) {
+    clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(() => {
+      setShown(false)
+      setTip(false)
+    }, ms)
+  }
 
   useEffect(() => {
-    let timer: number | undefined
     const reveal = () => {
       setShown(true)
-      clearTimeout(timer)
-      timer = window.setTimeout(() => {
-        setShown(false)
-        setTip(false)
-      }, TOGGLE_MS)
+      hideAfter(TOGGLE_MS)
     }
     const onVisible = () => {
       if (document.visibilityState === 'visible') reveal()
@@ -93,7 +102,7 @@ function FullscreenToggle() {
     document.addEventListener('visibilitychange', onVisible)
     for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(type, onFullscreen)
     return () => {
-      clearTimeout(timer)
+      clearTimeout(hideTimer.current)
       for (const type of ['pointerdown', 'touchstart']) document.removeEventListener(type, reveal)
       document.removeEventListener('visibilitychange', onVisible)
       for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.removeEventListener(type, onFullscreen)
@@ -103,7 +112,10 @@ function FullscreenToggle() {
   function toggle() {
     if (isFull) exitFullscreen()
     else if (fullscreenSupported()) fillTouchScreen()
-    else setTip(true)
+    else {
+      setTip(true)
+      hideAfter(TIP_MS)
+    }
   }
 
   return (
@@ -118,7 +130,9 @@ function FullscreenToggle() {
         ? 'iPhone browsers can’t go full screen. Tap Share → Add to Home Screen, then open Videokehan from there.'
         : isFull
           ? 'Exit full screen'
-          : 'Full screen'}
+          : fullscreenSupported()
+            ? 'Full screen'
+            : 'How to go full screen'}
     </button>
   )
 }
@@ -495,7 +509,7 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
       ) : (
         <Invitation state={state.data} onDisconnect={disconnect} />
       )}
-      {isTouchScreen() && <FullscreenToggle />}
+      {isTouchScreen() && !isStandalone() && <FullscreenToggle />}
     </>
   )
 }

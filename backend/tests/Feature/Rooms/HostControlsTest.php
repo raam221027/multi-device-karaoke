@@ -15,7 +15,15 @@ beforeEach(function () {
 it('names a new room after its host', function () {
     $this->postJson('/api/rooms', ['display_name' => 'Alex'])
         ->assertCreated()
-        ->assertJsonPath('room.name', 'Videokehan');
+        ->assertJsonPath('room.name', "Alex's Videokehan");
+});
+
+it('keeps a long host name within the room name limit', function () {
+    $name = str_repeat('a', 30);
+
+    $this->postJson('/api/rooms', ['display_name' => $name])
+        ->assertCreated()
+        ->assertJsonPath('room.name', str_repeat('a', 27)."'s Videokehan");
 });
 
 it('lets the host change room settings', function () {

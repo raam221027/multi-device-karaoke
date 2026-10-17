@@ -32,7 +32,8 @@ class RoomController extends Controller
             $name = $request->string('display_name')->trim()->value();
             $room = Room::create([
                 'code' => RoomCode::generate(),
-                'name' => 'Videokehan',
+                // Names cap at 30 and the column at 40, so trim to fit the suffix.
+                'name' => mb_substr($name, 0, 27)."'s Videokehan",
             ]);
 
             $host = $room->participants()->create([

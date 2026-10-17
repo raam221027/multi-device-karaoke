@@ -1,10 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Button, Card, ErrorText, Page, TextInput } from '../components/ui'
-import { ApiError } from '../lib/api'
+import { ApiError, getToken } from '../lib/api'
 import { clearDisplayEnded, connectDisplay, displayEnded } from '../lib/display'
-import { errorMessage, joinRoom, lookupCode, normalizeCode } from '../lib/rooms'
+import { errorMessage, getMe, joinRoom, lookupCode, normalizeCode } from '../lib/rooms'
 
 function Problem({ title, detail }: { title: string; detail: string }) {
   return (
@@ -31,6 +31,12 @@ export default function JoinPage() {
     retry: false,
   })
 
+  // Someone who closed the browser and scans again is already in: send them back
+  // in as themselves rather than adding them a second time. Keyed by token, so a
+  // session they've since left can't answer from the cache.
+  const token = getToken()
+  const me = useQuery({ queryKey: ['me', token], queryFn: getMe, enabled: token !== null, retry: false })
+
   const join = useMutation({
     mutationFn: () => joinRoom(code, name.trim()),
     onSuccess: (session) => {
@@ -51,7 +57,17 @@ export default function JoinPage() {
     join.mutate()
   }
 
-  if (room.isPending) {
+  if (me.data) {
+    const { room: joined, participant } = me.data
+    const active =
+      joined.code === code &&
+      joined.status === 'open' &&
+      (participant.role === 'host' || participant.role === 'guest') &&
+      (participant.status === 'approved' || participant.status === 'pending')
+    if (active) return <Navigate to={`/${participant.role === 'host' ? 'host' : 'room'}/${joined.id}`} replace />
+  }
+
+  if (room.isPending || me.isLoading) {
     return (
       <Page>
         <p className="text-center text-muted">Finding room {code}…</p>

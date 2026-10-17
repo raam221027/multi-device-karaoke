@@ -34,6 +34,10 @@ declare global {
 
 const PLAYING = 1
 const ENDED = 0
+const BUFFERING = 3
+
+// How long a play request may go unanswered before we assume the browser blocked it.
+const BLOCKED_MS = 2500
 
 let loading: Promise<YTNamespace> | null = null
 
@@ -55,34 +59,63 @@ function loadYouTube(): Promise<YTNamespace> {
 /**
  * Plays one queue item at a time and reports what actually happened. Reports
  * carry the item id, so the server ignores anything about an old song.
+ *
+ * iPhones only play sound after a tap inside the video itself, and that permission
+ * belongs to this one player. So keep it mounted between songs (`idle`) rather
+ * than making a new one, and say when a play request goes nowhere (`onBlocked`).
  */
 export default function YouTubePlayer({
   itemId,
   videoId,
   paused,
+  idle = false,
   onStarted,
   onEnded,
+  onBlocked,
 }: {
   itemId: number
   videoId: string
   paused: boolean
+  /** No song is current: stay paused on the last one, ready for the next. */
+  idle?: boolean
   onStarted: (itemId: number) => void
   /** On an error, `code` is the player's error and `videoId` the upload that failed. */
   onEnded: (itemId: number, reason: 'ended' | 'error', error?: { code: number; videoId: string }) => void
+  /** True when the browser won't start the video until someone taps it. */
+  onBlocked?: (blocked: boolean) => void
 }) {
   const host = useRef<HTMLDivElement>(null)
   // Set once the player is ready; its methods don't exist before that.
   const player = useRef<YTPlayer | null>(null)
 
   // Latest props for the player's event callbacks, which are bound once.
-  const latest = useRef({ itemId, videoId, paused, onStarted, onEnded })
+  const latest = useRef({ itemId, videoId, paused, idle, onStarted, onEnded, onBlocked })
   useLayoutEffect(() => {
-    latest.current = { itemId, videoId, paused, onStarted, onEnded }
+    latest.current = { itemId, videoId, paused, idle, onStarted, onEnded, onBlocked }
   })
   const loadedItem = useRef(itemId)
   // The server can swap in another upload of the same song, so the video can change under one item.
   const loadedVideo = useRef(videoId)
   const reportedStart = useRef<string | null>(null)
+  const playerState = useRef<number | null>(null)
+  const blockedTimer = useRef<number | undefined>(undefined)
+
+  /** Play or pause to match the props, and watch whether a play actually starts. */
+  function sync(p: YTPlayer) {
+    clearTimeout(blockedTimer.current)
+    if (latest.current.paused || latest.current.idle) {
+      p.pauseVideo()
+      latest.current.onBlocked?.(false)
+      return
+    }
+    p.playVideo()
+    blockedTimer.current = window.setTimeout(() => {
+      const { paused, idle } = latest.current
+      if (!paused && !idle && playerState.current !== PLAYING && playerState.current !== BUFFERING) {
+        latest.current.onBlocked?.(true)
+      }
+    }, BLOCKED_MS)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -107,10 +140,14 @@ export default function YouTubePlayer({
               loadedVideo.current = latest.current.videoId
               e.target.loadVideoById(latest.current.videoId)
             }
-            if (latest.current.paused) e.target.pauseVideo()
-            else e.target.playVideo()
+            sync(e.target)
           },
           onStateChange: (e) => {
+            playerState.current = e.data
+            if (e.data === PLAYING) {
+              clearTimeout(blockedTimer.current)
+              latest.current.onBlocked?.(false)
+            }
             const id = loadedItem.current
             const key = `${id}:${loadedVideo.current}`
             if (e.data === PLAYING && reportedStart.current !== key) {
@@ -127,6 +164,7 @@ export default function YouTubePlayer({
 
     return () => {
       cancelled = true
+      clearTimeout(blockedTimer.current)
       player.current?.destroy()
       player.current = null
       el.remove()
@@ -138,14 +176,12 @@ export default function YouTubePlayer({
     loadedItem.current = itemId
     loadedVideo.current = videoId
     player.current.loadVideoById(videoId)
+    sync(player.current)
   }, [itemId, videoId])
 
   useEffect(() => {
-    const p = player.current
-    if (!p) return
-    if (paused) p.pauseVideo()
-    else p.playVideo()
-  }, [paused])
+    if (player.current) sync(player.current)
+  }, [paused, idle])
 
   return <div ref={host} className="size-full [&>iframe]:size-full" />
 }

@@ -115,7 +115,7 @@ function FullscreenToggle() {
       }`}>
       <Icon src={isFull ? icons.minimize : icons.maximize} size={16} />
       {tip
-        ? 'This browser can’t go full screen. Use Share → Add to Home Screen, then open it from there.'
+        ? 'iPhone browsers can’t go full screen. Tap Share → Add to Home Screen, then open Videokehan from there.'
         : isFull
           ? 'Exit full screen'
           : 'Full screen'}
@@ -325,23 +325,49 @@ function useSwapNotice(current: QueueItem): boolean {
   return key !== null && shownFor === key
 }
 
-function NowPlaying({ state, session }: { state: RoomState; session: DisplaySession }) {
+/** The video, one player for the whole session (see YouTubePlayer). Hidden between songs. */
+function VideoLayer({ song, playing, paused, blocked, session, onBlocked }: {
+  song: QueueItem
+  playing: boolean
+  paused: boolean
+  blocked: boolean
+  session: DisplaySession
+  onBlocked: (blocked: boolean) => void
+}) {
+  return (
+    <div className={`fixed inset-0 bg-black ${playing ? '' : 'invisible'}`}>
+      <YouTubePlayer
+        itemId={song.id}
+        videoId={song.youtube_video_id}
+        paused={paused}
+        idle={!playing}
+        onStarted={(id) => void reportStarted(session, id).catch(() => {})}
+        onEnded={(id, reason, error) => void reportEnded(session, id, reason, error).catch(() => {})}
+        onBlocked={onBlocked}
+      />
+      {/* Taps inside the video iframe never reach this page (and would pause it behind the host's back), so catch them here.
+          Unless the browser is waiting for a tap on the video before it will play. */}
+      <div className={`absolute inset-0 ${blocked ? 'pointer-events-none' : ''}`} />
+    </div>
+  )
+}
+
+/** Everything drawn over the video. Lets taps through to it. */
+function NowPlaying({ state, blocked }: { state: RoomState; blocked: boolean }) {
   const current = state.queue.current!
   const next = state.queue.upcoming[0]
   const paused = state.room.playback_status === 'paused'
   const swapNotice = useSwapNotice(current)
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-black">
-      <YouTubePlayer
-        itemId={current.id}
-        videoId={current.youtube_video_id}
-        paused={paused}
-        onStarted={(id) => void reportStarted(session, id).catch(() => {})}
-        onEnded={(id, reason, error) => void reportEnded(session, id, reason, error).catch(() => {})}
-      />
-      {/* Taps inside the video iframe never reach this page (and would pause it behind the host's back), so catch them here. */}
-      <div className="absolute inset-0" />
+    <main className="pointer-events-none fixed inset-0 overflow-hidden">
+      {blocked && !paused && (
+        <div className="absolute inset-x-0 top-[35%] flex justify-center px-4">
+          <p className="rounded-full bg-bg/90 px-6 py-3 text-center text-[length:max(14px,2vw)] font-bold">
+            Tap the video to start the song
+          </p>
+        </div>
+      )}
       <div className="pointer-events-none absolute top-[2vw] right-[2vw] flex flex-col items-center gap-[0.6vw] rounded-[1.8vw] bg-bg/85 p-[1vw]">
         <JoinCode state={state} size="w-[max(96px,11vw)] max-w-[max(96px,22vh)]" />
         {!state.room.is_locked && (
@@ -422,6 +448,12 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
     navigate(`/${role === 'host' ? 'host' : 'room'}/${session.roomId}`, { replace: true })
   }, [becamePhone, role, session, navigate, queryClient])
 
+  // The song the player holds: the current one, or the last one while waiting for the next.
+  const current = state.data?.queue.current ?? null
+  const [song, setSong] = useState<QueueItem | null>(null)
+  if (current && (current.id !== song?.id || current.youtube_video_id !== song.youtube_video_id)) setSong(current)
+  const [blocked, setBlocked] = useState(false)
+
   if (gone || becamePhone || !fresh || !state.data) return <p className="p-6 text-center text-muted">Connecting…</p>
 
   // Browsers block sound until someone interacts with the page.
@@ -448,8 +480,18 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
 
   return (
     <>
-      {state.data.queue.current ? (
-        <NowPlaying state={state.data} session={session} />
+      {song && (
+        <VideoLayer
+          song={song}
+          playing={current !== null}
+          paused={state.data.room.playback_status === 'paused'}
+          blocked={blocked}
+          session={session}
+          onBlocked={setBlocked}
+        />
+      )}
+      {current ? (
+        <NowPlaying state={state.data} blocked={blocked} />
       ) : (
         <Invitation state={state.data} onDisconnect={disconnect} />
       )}

@@ -6,8 +6,11 @@ import * as icons from '../assets/icons'
 import { Button, ButtonLink, ErrorText, Icon, TextInput } from '../components/ui'
 import { api, getToken } from '../lib/api'
 import { createRoom, errorMessage, getMe, normalizeCode } from '../lib/rooms'
+import { useShare } from '../lib/share'
 
 type Health = { status: string; db: boolean; time: string }
+
+const CONTACT_EMAIL = 'raam221027@gmail.com'
 
 /** Only speaks up when the server can't be reached. */
 function ServerWarning() {
@@ -41,6 +44,26 @@ function ResumeSession() {
       </span>
       <span aria-hidden>→</span>
     </Link>
+  )
+}
+
+/** Clicking the email copies it and opens a Gmail draft to it in a new tab. */
+function ContactFooter() {
+  const { status, copy } = useShare()
+
+  return (
+    <p className="text-center text-[10px] leading-[1.45] text-muted">
+      © {new Date().getFullYear()} Videokehan · Contact:{' '}
+      <a
+        href={`https://mail.google.com/mail/?view=cm&to=${CONTACT_EMAIL}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => copy(CONTACT_EMAIL)}
+        className="text-accent"
+      >
+        {status === 'copied' ? 'Email copied!' : CONTACT_EMAIL}
+      </a>
+    </p>
   )
 }
 
@@ -172,6 +195,7 @@ export default function HomePage() {
 
       <ServerWarning />
       <p className="text-center text-[10px] leading-[1.45] text-muted">Karaoke videos powered by YouTube · Browser-based</p>
+      <ContactFooter />
     </main>
   )
 }

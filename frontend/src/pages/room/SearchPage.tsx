@@ -73,14 +73,27 @@ function ResultRow({
   const song = video.song_title ?? parsed.song
   const artist = video.song_title ? (video.artist ?? null) : parsed.artist
   const art = ARTWORK[index % ARTWORK.length]
+  // The video's own thumbnail tells karaoke uploads of the same song apart; the artwork tile is the fallback.
+  const [thumbFailed, setThumbFailed] = useState(false)
+  const thumb = video.thumbnail_url ?? `https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`
 
   return (
     <li className="flex flex-col gap-[11px] border-b border-line py-3.5">
       <div className="flex items-center gap-3">
-        <div className="flex h-16 w-[72px] shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[10px] bg-surface-2 p-2">
-          <Icon src={art.icon} size={25} />
-          <span className={`max-w-full truncate text-[10px] ${art.text}`}>{artist ?? video.channel_title}</span>
-        </div>
+        {thumbFailed ? (
+          <div className="flex h-[54px] w-24 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[10px] bg-surface-2 p-2">
+            <Icon src={art.icon} size={22} />
+            <span className={`max-w-full truncate text-[10px] ${art.text}`}>{artist ?? video.channel_title}</span>
+          </div>
+        ) : (
+          <img
+            src={thumb}
+            alt=""
+            loading="lazy"
+            onError={() => setThumbFailed(true)}
+            className="h-[54px] w-24 shrink-0 rounded-[10px] bg-surface-2 object-cover"
+          />
+        )}
         <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
           <p className="line-clamp-2 text-[15px] font-bold">{song}</p>
           <p className="truncate text-[11px] text-muted">

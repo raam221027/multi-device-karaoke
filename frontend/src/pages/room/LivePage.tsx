@@ -21,7 +21,7 @@ export default function LivePage() {
     <Screen>
       <PageHeading
         eyebrow={isHost ? `Host · Room ${room.code}` : `Room ${room.code}`}
-        title={room.name ?? 'The living room'}
+        title={room.name ?? 'Videokehan'}
         action={isHost && <TextLink to={`${base}/invite`}>Invite +</TextLink>}
       />
 

@@ -15,7 +15,7 @@ beforeEach(function () {
 it('names a new room after its host', function () {
     $this->postJson('/api/rooms', ['display_name' => 'Alex'])
         ->assertCreated()
-        ->assertJsonPath('room.name', "Alex's living room");
+        ->assertJsonPath('room.name', 'Videokehan');
 });
 
 it('lets the host change room settings', function () {

@@ -21,7 +21,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 
 class RoomController extends Controller
 {
@@ -33,7 +32,7 @@ class RoomController extends Controller
             $name = $request->string('display_name')->trim()->value();
             $room = Room::create([
                 'code' => RoomCode::generate(),
-                'name' => Str::limit("{$name}'s living room", 40, ''),
+                'name' => 'Videokehan',
             ]);
 
             $host = $room->participants()->create([

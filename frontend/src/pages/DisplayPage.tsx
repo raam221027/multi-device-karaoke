@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
 import YouTubePlayer from '../components/YouTubePlayer'
@@ -68,12 +68,72 @@ const TOGGLE_MS = 3000
 // The Home Screen tip is longer, so it stays up long enough to read.
 const TIP_MS = 8000
 
+const SIDEWAYS_KEY = 'karaoke.displaySideways'
+
+function readSideways(): boolean {
+  try {
+    return localStorage.getItem(SIDEWAYS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function saveSideways(on: boolean) {
+  try {
+    if (on) localStorage.setItem(SIDEWAYS_KEY, '1')
+    else localStorage.removeItem(SIDEWAYS_KEY)
+  } catch {
+    // Storage unavailable; the choice just won't survive a reload.
+  }
+}
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const list = window.matchMedia(query)
+    const onChange = () => setMatches(list.matches)
+    onChange()
+    list.addEventListener('change', onChange)
+    return () => list.removeEventListener('change', onChange)
+  }, [query])
+  return matches
+}
+
+/**
+ * Holds the whole screen. An iPhone can't go fullscreen or rotate for a web page,
+ * so in Home Screen mode "full screen" turns the stage itself sideways: hold the
+ * phone sideways and it fills the screen. Skipped when the phone is already in
+ * landscape. Children size with cqw/cqh, never vw/vh, so they fit either way.
+ */
+function Stage({ sideways, children }: { sideways: boolean; children: ReactNode }) {
+  const portrait = useMediaQuery('(orientation: portrait)')
+  const rotated = sideways && portrait
+  return (
+    <div
+      className={rotated ? 'fixed top-0 left-0 overflow-hidden' : 'fixed inset-0 overflow-hidden'}
+      style={{
+        containerType: 'size',
+        ...(rotated && {
+          width: '100dvh',
+          height: '100dvw',
+          transformOrigin: 'top left',
+          transform: 'translateX(100dvw) rotate(90deg)',
+        }),
+      }}>
+      {children}
+    </div>
+  )
+}
+
 /**
  * A fullscreen toggle for a phone or tablet screen, hidden until someone taps.
  * A call or a trip to the home screen drops fullscreen, so coming back shows it too.
+ * With `sideways`, it turns the stage instead (iPhone Home Screen mode).
  */
-function FullscreenToggle() {
-  const [isFull, setIsFull] = useState(() => !!fullscreenElement())
+function FullscreenToggle({ sideways }: { sideways?: { on: boolean; toggle: () => void } }) {
+  const [realFull, setIsFull] = useState(() => !!fullscreenElement())
+  const isFull = sideways ? sideways.on : realFull
+  const landscape = useMediaQuery('(orientation: landscape)')
   const [shown, setShown] = useState(false)
   // Where fullscreen isn't possible, the button explains the Home Screen route instead.
   const [tip, setTip] = useState(false)
@@ -109,8 +169,12 @@ function FullscreenToggle() {
     }
   }, [])
 
+  // Already sideways for real: there's nothing to turn.
+  if (sideways && landscape) return null
+
   function toggle() {
-    if (isFull) exitFullscreen()
+    if (sideways) sideways.toggle()
+    else if (isFull) exitFullscreen()
     else if (fullscreenSupported()) fillTouchScreen()
     else {
       setTip(true)
@@ -122,7 +186,7 @@ function FullscreenToggle() {
     <button
       type="button"
       onClick={toggle}
-      className={`fixed top-3 left-3 z-50 flex min-h-11 max-w-[calc(100vw-24px)] items-center gap-2 rounded-full bg-bg/90 px-4 py-2 text-left text-[13px] font-semibold transition-opacity duration-300 ${
+      className={`fixed top-3 left-3 z-50 flex min-h-11 max-w-[calc(100cqw-24px)] items-center gap-2 rounded-full bg-bg/90 px-4 py-2 text-left text-[13px] font-semibold transition-opacity duration-300 ${
         shown ? 'opacity-100' : 'pointer-events-none opacity-0'
       }`}>
       <Icon src={isFull ? icons.minimize : icons.maximize} size={16} />
@@ -130,7 +194,7 @@ function FullscreenToggle() {
         ? 'iPhone browsers can’t go full screen. Tap Share → Add to Home Screen, then open Videokehan from there.'
         : isFull
           ? 'Exit full screen'
-          : fullscreenSupported()
+          : sideways || fullscreenSupported()
             ? 'Full screen'
             : 'How to go full screen'}
     </button>
@@ -281,14 +345,14 @@ function JoinCode({ state, size }: { state: RoomState; size: string }) {
   const { room } = state
   if (room.is_locked) {
     return (
-      <div className={`flex shrink-0 flex-col items-center justify-center gap-[0.5vw] rounded-[1.5vw] bg-surface p-[1.5vw] text-center ${size}`}>
-        <p className="text-[length:max(13px,1.6vw)] font-bold">Room locked</p>
-        <p className="text-[length:max(11px,1vw)] text-muted">The host isn’t letting new people in.</p>
+      <div className={`flex shrink-0 flex-col items-center justify-center gap-[0.5cqw] rounded-[1.5cqw] bg-surface p-[1.5cqw] text-center ${size}`}>
+        <p className="text-[length:max(13px,1.6cqw)] font-bold">Room locked</p>
+        <p className="text-[length:max(11px,1cqw)] text-muted">The host isn’t letting new people in.</p>
       </div>
     )
   }
   return (
-    <div className="shrink-0 rounded-[1.5vw] bg-white p-[1vw]">
+    <div className="shrink-0 rounded-[1.5cqw] bg-white p-[1cqw]">
       <QRCodeSVG
         value={joinUrl(room.code)}
         size={512}
@@ -303,19 +367,19 @@ function JoinCode({ state, size }: { state: RoomState; size: string }) {
 function Invitation({ state, onDisconnect }: { state: RoomState; onDisconnect: () => void }) {
   const { room } = state
   return (
-    <main className="flex min-h-screen flex-col justify-center bg-screen p-[6vw]">
-      <div className="flex items-center gap-[6vw]">
-        <div className="flex min-w-0 flex-1 flex-col gap-[2vw]">
-          <p className="text-[length:max(22px,3vw)] font-extrabold text-accent">Videokehan</p>
-          <p className="text-[length:max(32px,6vw)] leading-[1.1]">The mic is for everyone.</p>
-          <p className="text-[length:max(14px,2vw)] text-muted">
+    <main className="flex h-full flex-col justify-center overflow-y-auto bg-screen p-[6cqw]">
+      <div className="flex items-center gap-[6cqw]">
+        <div className="flex min-w-0 flex-1 flex-col gap-[2cqw]">
+          <p className="text-[length:max(22px,3cqw)] font-extrabold text-accent">Videokehan</p>
+          <p className="text-[length:max(32px,6cqw)] leading-[1.1]">The mic is for everyone.</p>
+          <p className="text-[length:max(14px,2cqw)] text-muted">
             {publicHost()} · <span className="font-bold text-ink">{room.code}</span>
           </p>
-          <p className="text-[length:max(13px,1.6vw)] text-muted">
+          <p className="text-[length:max(13px,1.6cqw)] text-muted">
             {state.queue.upcoming.length > 0 ? 'Starting the next song…' : 'Scan to join, then add a song from your phone.'}
           </p>
         </div>
-        <JoinCode state={state} size="w-[28vw] max-w-[60vh]" />
+        <JoinCode state={state} size="w-[28cqw] max-w-[60cqh]" />
       </div>
       <button type="button" onClick={onDisconnect} className="fixed right-4 bottom-4 text-[12px] text-muted/60 hover:text-muted">
         Disconnect this screen
@@ -377,43 +441,43 @@ function NowPlaying({ state, blocked }: { state: RoomState; blocked: boolean }) 
     <main className="pointer-events-none fixed inset-0 overflow-hidden">
       {blocked && !paused && (
         <div className="absolute inset-x-0 top-[35%] flex justify-center px-4">
-          <p className="rounded-full bg-bg/90 px-6 py-3 text-center text-[length:max(14px,2vw)] font-bold">
+          <p className="rounded-full bg-bg/90 px-6 py-3 text-center text-[length:max(14px,2cqw)] font-bold">
             Tap the video to start the song
           </p>
         </div>
       )}
-      <div className="pointer-events-none absolute top-[2vw] right-[2vw] flex flex-col items-center gap-[0.6vw] rounded-[1.8vw] bg-bg/85 p-[1vw]">
-        <JoinCode state={state} size="w-[max(96px,11vw)] max-w-[max(96px,22vh)]" />
+      <div className="pointer-events-none absolute top-[2cqw] right-[2cqw] flex flex-col items-center gap-[0.6cqw] rounded-[1.8cqw] bg-bg/85 p-[1cqw]">
+        <JoinCode state={state} size="w-[max(96px,11cqw)] max-w-[max(96px,22cqh)]" />
         {!state.room.is_locked && (
-          <p className="text-center text-[length:max(11px,1vw)] leading-tight text-muted">
+          <p className="text-center text-[length:max(11px,1cqw)] leading-tight text-muted">
             Scan to join
             <br />
-            <span className="text-[length:max(13px,1.4vw)] font-bold tracking-[0.08em] text-ink">{state.room.code}</span>
+            <span className="text-[length:max(13px,1.4cqw)] font-bold tracking-[0.08em] text-ink">{state.room.code}</span>
           </p>
         )}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 bg-gradient-to-t from-black/80 to-transparent px-[3vw] pt-[6vw] pb-[2vw]">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 bg-gradient-to-t from-black/80 to-transparent px-[3cqw] pt-[6cqw] pb-[2cqw]">
         <div className="flex flex-col gap-1">
-          <p className="text-[length:max(13px,1.4vw)] font-semibold text-accent">ON THE MIC</p>
-          <p className="text-[length:max(20px,2.6vw)] font-bold">{current.added_by.display_name}</p>
-          <p className="text-[length:max(13px,1.4vw)] text-muted">{songName(current)}</p>
+          <p className="text-[length:max(13px,1.4cqw)] font-semibold text-accent">ON THE MIC</p>
+          <p className="text-[length:max(20px,2.6cqw)] font-bold">{current.added_by.display_name}</p>
+          <p className="text-[length:max(13px,1.4cqw)] text-muted">{songName(current)}</p>
           {swapNotice && (
-            <p className="mt-1 w-fit rounded-full bg-bg/85 px-3 py-1 text-[length:max(12px,1.1vw)] text-muted">
+            <p className="mt-1 w-fit rounded-full bg-bg/85 px-3 py-1 text-[length:max(12px,1.1cqw)] text-muted">
               The chosen video can’t play here, so this is another version.
             </p>
           )}
         </div>
         {next && (
-          <div className="flex max-w-[40vw] flex-col items-end gap-1 text-right">
-            <p className="text-[length:max(13px,1.4vw)] font-semibold text-accent">UP NEXT</p>
-            <p className="max-w-full truncate text-[length:max(15px,1.8vw)] font-bold text-ink">{songName(next)}</p>
-            <p className="text-[length:max(13px,1.4vw)] text-muted">{next.added_by.display_name}</p>
+          <div className="flex max-w-[40cqw] flex-col items-end gap-1 text-right">
+            <p className="text-[length:max(13px,1.4cqw)] font-semibold text-accent">UP NEXT</p>
+            <p className="max-w-full truncate text-[length:max(15px,1.8cqw)] font-bold text-ink">{songName(next)}</p>
+            <p className="text-[length:max(13px,1.4cqw)] text-muted">{next.added_by.display_name}</p>
           </div>
         )}
       </div>
       {paused && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50">
-          <p className="rounded-full bg-bg/90 px-6 py-3 text-[length:max(14px,2vw)] font-bold">Paused by the host</p>
+          <p className="rounded-full bg-bg/90 px-6 py-3 text-[length:max(14px,2cqw)] font-bold">Paused by the host</p>
         </div>
       )}
     </main>
@@ -468,22 +532,32 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
   if (current && (current.id !== song?.id || current.youtube_video_id !== song.youtube_video_id)) setSong(current)
   const [blocked, setBlocked] = useState(false)
 
+  // iPhone Home Screen mode can't go fullscreen for real, so the toggle turns the stage instead.
+  const [sideways, setSideways] = useState(readSideways)
+  const canTurn = isStandalone() && !fullscreenSupported()
+  const toggleSideways = () => {
+    saveSideways(!sideways)
+    setSideways(!sideways)
+  }
+
   if (gone || becamePhone || !fresh || !state.data) return <p className="p-6 text-center text-muted">Connecting…</p>
 
   // Browsers block sound until someone interacts with the page.
   if (!armed) {
     return (
-      <button
-        type="button"
-        onClick={() => {
-          fillTouchScreen()
-          onArm()
-        }}
-        className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-screen">
-        <Icon src={icons.playBadge} size={48} />
-        <span className="text-[length:max(22px,3vw)] font-bold">Tap to start the show</span>
-        <span className="text-[length:max(13px,1.6vw)] text-muted">One tap lets this screen play sound.</span>
-      </button>
+      <Stage sideways={canTurn && sideways}>
+        <button
+          type="button"
+          onClick={() => {
+            fillTouchScreen()
+            onArm()
+          }}
+          className="flex h-full w-full flex-col items-center justify-center gap-4 bg-screen">
+          <Icon src={icons.playBadge} size={48} />
+          <span className="text-[length:max(22px,3cqw)] font-bold">Tap to start the show</span>
+          <span className="text-[length:max(13px,1.6cqw)] text-muted">One tap lets this screen play sound.</span>
+        </button>
+      </Stage>
     )
   }
 
@@ -493,7 +567,7 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
   }
 
   return (
-    <>
+    <Stage sideways={canTurn && sideways}>
       {song && (
         <VideoLayer
           song={song}
@@ -509,8 +583,10 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
       ) : (
         <Invitation state={state.data} onDisconnect={disconnect} />
       )}
-      {isTouchScreen() && !isStandalone() && <FullscreenToggle />}
-    </>
+      {isTouchScreen() && (
+        <FullscreenToggle sideways={canTurn ? { on: sideways, toggle: toggleSideways } : undefined} />
+      )}
+    </Stage>
   )
 }
 

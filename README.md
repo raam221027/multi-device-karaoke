@@ -1,4 +1,4 @@
-# Multi-Phone Karaoke
+# Multi-Device Karaoke
 
 Browser-based karaoke for multiple phones. The host creates a room on their phone, guests join by QR code or room code (no accounts, no app install), and a laptop connected to a TV plays YouTube karaoke videos. All devices sync in real time through a cloud backend, even when they're on different networks.
 
@@ -72,6 +72,6 @@ See [docs/deploy.md](docs/deploy.md): the frontend on Vercel (`frontend/vercel.j
 Create an **empty** repository on github.com (no README or .gitignore), then:
 
 ```bash
-git remote add origin https://github.com/<you>/multi-phone-karaoke.git
+git remote add origin https://github.com/<you>/multi-device-karaoke.git
 git push -u origin main
 ```

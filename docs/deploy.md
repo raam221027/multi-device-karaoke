@@ -20,7 +20,7 @@ Pricing changes, so check it when you sign up. Vercel Hobby is free. Railway giv
 5. Under **Variables**, add:
 
    ```dotenv
-   APP_NAME="Multi-Phone Karaoke"
+   APP_NAME="Multi-Device Karaoke"
    APP_ENV=production
    APP_DEBUG=false
    APP_KEY=<output of: php artisan key:generate --show>

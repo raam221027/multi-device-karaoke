@@ -65,7 +65,7 @@ cd frontend && npm run build        # type-check + production build
 
 ## Deploying
 
-See [docs/deploy.md](docs/deploy.md): any cheap Ubuntu VPS (Hetzner, DigitalOcean) or Oracle's free tier, with Caddy (HTTPS), PHP-FPM and MySQL. The sample config is in `deploy/`.
+See [docs/deploy.md](docs/deploy.md): the frontend on Vercel (`frontend/vercel.json` proxies `/api` to the backend), and Laravel + MySQL on Railway (`backend/railway.json`).
 
 ## Pushing to GitHub
 

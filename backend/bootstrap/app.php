@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['api', 'auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Railway (and Vercel's rewrite) terminate TLS in front of the app.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,

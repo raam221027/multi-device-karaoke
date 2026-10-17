@@ -126,4 +126,4 @@ queue_items       id, room_id, added_by_participant_id, youtube_video_id, title,
 5. YouTube search proxy (cache + rate limits) ← *done*
 6. Kick, lock, song permissions, host dashboard ← *done* (guest approval still to do)
 7. Multi-network testing over Cloudflare Tunnel, hardening
-8. Production deploy (Nginx + Reverb proxy, Supervisor, TLS)
+8. Production deploy (Vercel frontend, Railway backend + MySQL, Reverb as a second Railway service)

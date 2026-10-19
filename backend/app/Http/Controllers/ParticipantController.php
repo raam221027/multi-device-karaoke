@@ -57,6 +57,7 @@ class ParticipantController extends Controller
         Gate::authorize('manage', $room);
         $this->ensureGuestOf($room, $participant);
         abort_unless($participant->isGuest(), 422, 'Only a guest can become the host.');
+        $this->ensureConnected($participant);
 
         /** @var Participant $host */
         $host = $request->user();
@@ -83,6 +84,7 @@ class ParticipantController extends Controller
         Gate::authorize('manage', $room);
         $this->ensureGuestOf($room, $participant);
         abort_unless($participant->isGuest(), 422, 'Only a guest\'s phone can become the display.');
+        $this->ensureConnected($participant);
 
         DB::transaction(function () use ($room, $participant) {
             Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
@@ -101,5 +103,11 @@ class ParticipantController extends Controller
     {
         abort_unless($participant->room_id === $room->id && $participant->isApproved(), 404);
         abort_if($participant->isHost(), 422, 'The host can\'t be removed. Close the room instead.');
+    }
+
+    /** A role handed to a participant with no device behind it would leave nobody holding it. */
+    private function ensureConnected(Participant $participant): void
+    {
+        abort_unless($participant->isConnected(), 422, 'That device isn\'t connected anymore. Pick someone else.');
     }
 }

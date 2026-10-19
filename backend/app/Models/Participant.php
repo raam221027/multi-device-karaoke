@@ -73,6 +73,14 @@ class Participant extends Authenticatable
         return $this->status === ParticipantStatus::Approved;
     }
 
+    /** Has a device behind it: someone who left, was removed or let their session expire has no live token. */
+    public function isConnected(): bool
+    {
+        return $this->tokens()
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->exists();
+    }
+
     /** Change role in place: existing tokens keep working but carry the new ability. */
     public function assignRole(ParticipantRole $role): void
     {

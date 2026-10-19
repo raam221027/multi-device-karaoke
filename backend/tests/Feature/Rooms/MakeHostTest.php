@@ -58,6 +58,21 @@ it('does not make the display the host', function () {
     asDevice($this->hostToken)->postJson(makeHostUrl($this->room, $this->host->id))->assertStatus(422);
 });
 
+it('does not hand the room to a guest who left', function () {
+    asDevice($this->guestToken)->postJson("/api/rooms/{$this->room->id}/leave")->assertNoContent();
+
+    asDevice($this->hostToken)->postJson(makeHostUrl($this->room, $this->guest->id))->assertNotFound();
+    expect($this->host->refresh()->isHost())->toBeTrue();
+});
+
+it('does not hand the room to a guest with no device behind them', function () {
+    $this->guest->tokens()->delete();
+
+    asDevice($this->hostToken)->postJson(makeHostUrl($this->room, $this->guest->id))->assertStatus(422);
+    expect($this->host->refresh()->isHost())->toBeTrue()
+        ->and($this->guest->refresh()->isGuest())->toBeTrue();
+});
+
 it('does not reach into another room', function () {
     [$stranger] = deviceIn(Room::factory()->create(), 'guest');
 

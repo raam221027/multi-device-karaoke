@@ -54,3 +54,10 @@ it('is only for the host', function () {
 
     asDevice($this->guestToken)->postJson(($this->url)($other))->assertForbidden();
 });
+
+it('does not make a guest with no device behind them the display', function () {
+    $this->guest->tokens()->delete();
+
+    asDevice($this->hostToken)->postJson(($this->url)($this->guest))->assertStatus(422);
+    expect($this->guest->refresh()->isGuest())->toBeTrue();
+});

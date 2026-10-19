@@ -124,6 +124,7 @@ class RoomController extends Controller
             ->where('status', ParticipantStatus::Approved)
             ->firstOr(fn () => abort(404));
         abort_if($next->isHost(), 422, 'Pick a guest or the screen to take over as host.');
+        abort_unless($next->isConnected(), 422, 'That device isn\'t connected anymore. Pick someone else.');
 
         /** @var Participant $host */
         $host = $request->user();
@@ -233,11 +234,26 @@ class RoomController extends Controller
         ]);
     }
 
+    /**
+     * The device is gone, so its participant goes too: it drops off everyone's
+     * list and can't be handed a role. Joining again makes a new participant.
+     * Songs they queued stay, since they're often just rejoining.
+     */
     public function leave(Request $request, Room $room): Response
     {
         Gate::authorize('leave', $room);
 
-        $request->user()->currentAccessToken()->delete();
+        /** @var Participant $me */
+        $me = $request->user();
+
+        DB::transaction(function () use ($room, $me) {
+            Room::whereKey($room->id)->lockForUpdate()->firstOrFail();
+
+            $me->update(['status' => ParticipantStatus::Left]);
+            $me->tokens()->delete();
+
+            $room->bumpVersion();
+        });
 
         return response()->noContent();
     }

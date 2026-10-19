@@ -51,6 +51,16 @@ it('lets a guest leave without affecting others', function () {
     asDevice($this->hostToken)->getJson('/api/me')->assertOk();
 });
 
+it('drops a guest who left from the room, so rejoining does not list them twice', function () {
+    asDevice($this->guestToken)->postJson("/api/rooms/{$this->room->id}/leave")->assertNoContent();
+
+    expect($this->guest->refresh()->status)->toBe(ParticipantStatus::Left);
+    asDevice($this->hostToken)
+        ->getJson("/api/rooms/{$this->room->id}/state")
+        ->assertJsonCount(1, 'participants')
+        ->assertJsonPath('participants.0.id', $this->host->id);
+});
+
 it('does not let the host leave (they close instead)', function () {
     asDevice($this->hostToken)->postJson("/api/rooms/{$this->room->id}/leave")->assertForbidden();
 });

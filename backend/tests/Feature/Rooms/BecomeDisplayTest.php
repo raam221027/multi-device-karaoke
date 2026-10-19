@@ -94,3 +94,10 @@ it('is only for the host', function () {
 
     asDevice($this->guestToken)->postJson($this->url, ['participant_id' => $other->id])->assertForbidden();
 });
+
+it('does not hand host to a guest with no device behind them', function () {
+    $this->guest->tokens()->delete();
+
+    asDevice($this->hostToken)->postJson($this->url, ['participant_id' => $this->guest->id])->assertStatus(422);
+    expect(roleOf($this->hostToken, $this->room))->toBe('host');
+});

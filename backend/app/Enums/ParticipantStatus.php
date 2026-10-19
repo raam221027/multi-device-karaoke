@@ -8,4 +8,5 @@ enum ParticipantStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Kicked = 'kicked';
+    case Left = 'left';
 }

@@ -44,7 +44,7 @@ export default function BecomeScreenPage() {
       </Lead>
 
       <section className="flex flex-col">
-        <p className="pb-2 text-[10px] text-muted">WHO HOSTS NEXT?</p>
+        <p className="pb-2 text-[12px] text-muted">WHO HOSTS NEXT?</p>
         {candidates.map((p) => {
           const selected = p.id === picked
           const isScreen = p.role === 'display'
@@ -64,8 +64,8 @@ export default function BecomeScreenPage() {
                 <Avatar id={p.id} name={p.display_name} size={36} />
               )}
               <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className="truncate text-[14px]">{isScreen ? displayLabel(p) : p.display_name}</span>
-                <span className="text-[10px] text-muted">
+                <span className="truncate text-[15px]">{isScreen ? displayLabel(p) : p.display_name}</span>
+                <span className="text-[12px] text-muted">
                   {isScreen ? 'Swap: it becomes the host, this phone the display' : (singerStatus(state, p.id) ?? 'Joined')}
                 </span>
               </span>
@@ -80,7 +80,7 @@ export default function BecomeScreenPage() {
           )
         })}
         {candidates.length === 0 && (
-          <p className="py-3.5 text-[13px] leading-[1.45] text-muted">
+          <p className="py-3.5 text-[14px] leading-[1.45] text-muted">
             No one to hand over to yet. Invite a guest or connect a display, then come back here.
           </p>
         )}

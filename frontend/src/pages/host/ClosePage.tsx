@@ -13,8 +13,8 @@ function Consequence({ icon, title, detail }: { icon: string; title: string; det
     <li className="flex items-start gap-3">
       <Icon src={icon} size={20} />
       <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
-        <p className="text-[13px]">{title}</p>
-        <p className="text-[12px] leading-[1.45] text-muted">{detail}</p>
+        <p className="text-[14px]">{title}</p>
+        <p className="text-[14px] leading-[1.45] text-muted">{detail}</p>
       </div>
     </li>
   )
@@ -54,7 +54,7 @@ export default function ClosePage() {
           </>
         }
       >
-        <p className="-mt-3 text-[14px] leading-[1.45] text-muted">
+        <p className="-mt-3 text-[15px] leading-[1.45] text-muted">
           You’re ending {room.name ?? 'this room'}, not just leaving the page.
         </p>
 
@@ -80,7 +80,7 @@ export default function ClosePage() {
           />
         </ul>
 
-        <p className="text-[12px] leading-[1.45] text-muted">
+        <p className="text-[14px] leading-[1.45] text-muted">
           This can’t be undone. You can always create a new room for the next round.
         </p>
       </ConfirmCard>

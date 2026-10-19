@@ -50,7 +50,7 @@ function BottomNav({ base, tabs }: { base: string; tabs: Tab[] }) {
                 className="flex flex-col items-center justify-center gap-[5px]"
               >
                 <img src={isActive ? tab.activeIcon : tab.icon} width={21} height={21} alt="" aria-hidden />
-                <span className={`text-[10px] ${isActive ? 'font-bold text-accent' : 'text-muted'}`}>{tab.label}</span>
+                <span className={`text-[12px] ${isActive ? 'font-bold text-accent' : 'text-muted'}`}>{tab.label}</span>
               </Link>
             </li>
           )

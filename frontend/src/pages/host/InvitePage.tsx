@@ -22,11 +22,11 @@ export default function InvitePage() {
           <QRCodeSVG value={url} size={164} marginSize={0} title={`Join link for room ${room.code}`} />
         </div>
         <p className="font-bold tracking-[0.08em] text-[38px]">{room.code}</p>
-        <p className="text-[12px] leading-[1.45] text-muted">
+        <p className="text-[14px] leading-[1.45] text-muted">
           Scan to join, or enter {room.code} at {publicHost()}
         </p>
         {isLocalhost && (
-          <p className="text-[10px] leading-[1.45] text-danger">
+          <p className="text-[12px] leading-[1.45] text-danger">
             This QR points to localhost, which phones can’t reach. Open the app with your PC’s LAN IP instead.
           </p>
         )}
@@ -48,7 +48,7 @@ export default function InvitePage() {
 
       <div className="flex items-center gap-2.5">
         <Icon src={icons.smartphone} size={20} />
-        <p className="flex-1 text-[12px] leading-[1.45] text-muted">
+        <p className="flex-1 text-[14px] leading-[1.45] text-muted">
           Guests choose a name and join. No download or sign-up needed.
         </p>
       </div>

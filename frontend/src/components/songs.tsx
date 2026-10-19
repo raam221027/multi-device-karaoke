@@ -23,9 +23,9 @@ export function QueueRow({
       {leading}
       <Avatar id={item.added_by.id} name={item.added_by.display_name} />
       <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
-        <p className="truncate text-[14px]">{songName(item)}</p>
-        <p className="truncate text-[11px] text-muted">{songMeta(item)}</p>
-        <p className="text-[11px] text-accent">{labelFor(item.added_by, meId)}</p>
+        <p className="truncate text-[15px]">{songName(item)}</p>
+        <p className="truncate text-[13px] text-muted">{songMeta(item)}</p>
+        <p className="text-[13px] text-accent">{labelFor(item.added_by, meId)}</p>
       </div>
       {trailing}
     </div>
@@ -100,7 +100,7 @@ export function NowSinging({
       <div className="flex items-center gap-3">
         <Avatar id={current.added_by.id} name={current.added_by.display_name} size={44} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="text-[11px] font-semibold text-accent">ON THE MIC</p>
+          <p className="text-[13px] font-semibold text-accent">ON THE MIC</p>
           <p className="truncate text-[22px] font-bold">{labelFor(current.added_by, state.me.id)}</p>
         </div>
         <Icon src={icons.micVocal} size={25} />
@@ -111,7 +111,7 @@ export function NowSinging({
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute top-3 left-3 flex items-center gap-[5px]">
           <Icon src={icons.youtube} size={19} />
-          <span className="text-[10px] font-semibold text-white">
+          <span className="text-[12px] font-semibold text-white">
             YouTube · {state.display_connected ? 'playing on the TV' : 'waiting for the TV'}
           </span>
         </div>
@@ -126,7 +126,7 @@ export function NowSinging({
         </div>
         <div className="absolute inset-x-3 bottom-3 flex items-center gap-2.5">
           <Icon src={paused ? icons.playSmall : icons.pauseSmall} size={14} />
-          <span className="text-[10px] text-white tabular-nums">
+          <span className="text-[12px] text-white tabular-nums">
             {formatDuration(elapsed)} / {formatDuration(current.duration_seconds)}
           </span>
           <div className="flex h-[3px] flex-1 bg-white/40" role="progressbar" aria-valuenow={Math.round(progress * 100)}>
@@ -138,7 +138,7 @@ export function NowSinging({
 
       <div className="flex flex-col gap-1">
         <h2 className="truncate text-[23px] font-bold">{songName(current)}</h2>
-        <p className="truncate text-[12px] text-muted">
+        <p className="truncate text-[14px] text-muted">
           {[artist ?? current.channel_title, isKaraoke && 'Karaoke version', 'YouTube'].filter(Boolean).join(' · ')}
         </p>
       </div>

@@ -19,7 +19,7 @@ export function Icon({ src, size, className = '' }: { src: string; size: number;
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {
-  return <p className="text-[11px] font-bold text-accent uppercase">{children}</p>
+  return <p className="text-[13px] font-bold text-accent uppercase">{children}</p>
 }
 
 export function PageHeading({
@@ -36,7 +36,7 @@ export function PageHeading({
   return (
     <header className="flex flex-col gap-[9px]">
       {back ? (
-        <Link to={back.to} className="w-fit text-[11px] font-bold text-accent uppercase">
+        <Link to={back.to} className="w-fit text-[13px] font-bold text-accent uppercase">
           ← {back.label}
         </Link>
       ) : (
@@ -52,11 +52,11 @@ export function PageHeading({
 
 /** The lime text link in a heading row ("Invite +", "Full queue →"). */
 export function TextLink({ className = '', ...props }: LinkProps) {
-  return <Link className={`shrink-0 text-[13px] text-accent ${className}`} {...props} />
+  return <Link className={`shrink-0 text-[14px] text-accent ${className}`} {...props} />
 }
 
 export function Lead({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <p className={`text-[14px] leading-[1.45] text-muted ${className}`}>{children}</p>
+  return <p className={`text-[15px] leading-[1.45] text-muted ${className}`}>{children}</p>
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -67,7 +67,7 @@ export function SectionHeading({ title, aside }: { title: ReactNode; aside?: Rea
   return (
     <div className="flex items-center justify-between gap-3">
       <h2 className="text-[17px] font-bold">{title}</h2>
-      {aside && <span className="text-[12px] text-accent">{aside}</span>}
+      {aside && <span className="text-[14px] text-accent">{aside}</span>}
     </div>
   )
 }
@@ -77,7 +77,7 @@ export function Note({ icon, children }: { icon: string; children: ReactNode }) 
   return (
     <div className="flex items-start gap-2.5 rounded-xl bg-surface p-3.5">
       <Icon src={icon} size={18} />
-      <p className="flex-1 text-[12px] leading-[1.45] text-muted">{children}</p>
+      <p className="flex-1 text-[14px] leading-[1.45] text-muted">{children}</p>
     </div>
   )
 }
@@ -85,7 +85,7 @@ export function Note({ icon, children }: { icon: string; children: ReactNode }) 
 export function StatusPill({ tone = 'accent', children }: { tone?: 'accent' | 'danger'; children: ReactNode }) {
   const colors = tone === 'accent' ? 'bg-accent-soft text-accent' : 'bg-danger-soft text-danger'
   return (
-    <span className={`inline-flex w-fit shrink-0 rounded-full px-[9px] py-[5px] text-[10px] font-bold uppercase ${colors}`}>
+    <span className={`inline-flex w-fit shrink-0 rounded-full px-[9px] py-[5px] text-[12px] font-bold uppercase ${colors}`}>
       {children}
     </span>
   )
@@ -184,7 +184,7 @@ export function TextInput({ className = '', ...props }: InputHTMLAttributes<HTML
 
 export function ErrorText({ children }: { children: ReactNode }) {
   return children ? (
-    <p role="alert" className="text-[13px] text-danger">
+    <p role="alert" className="text-[14px] text-danger">
       {children}
     </p>
   ) : null

@@ -120,7 +120,7 @@ export default function JoinPage() {
           <Button variant="secondary" onClick={() => screen.mutate()} disabled={screen.isPending || join.isPending}>
             {screen.isPending ? 'Connecting…' : 'Use this device as the display instead'}
           </Button>
-          <p className="text-center text-[12px] text-muted">This replaces the screen that’s playing now.</p>
+          <p className="text-center text-[14px] text-muted">This replaces the screen that’s playing now.</p>
           <ErrorText>{screen.isError && errorMessage(screen.error)}</ErrorText>
         </div>
       )}

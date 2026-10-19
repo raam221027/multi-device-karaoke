@@ -35,8 +35,8 @@ export default function GuestRoomPage() {
           <div key={p.id} className="flex items-center gap-2.5 border-b border-line py-3.5">
             <Avatar id={p.id} name={p.display_name} size={36} />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <p className="truncate text-[14px]">{p.id === me.id ? `${p.display_name} · You` : p.display_name}</p>
-              <p className="text-[10px] text-muted">{singerStatus(state, p.id) ?? (p.role === 'host' ? 'Host' : 'Joined')}</p>
+              <p className="truncate text-[15px]">{p.id === me.id ? `${p.display_name} · You` : p.display_name}</p>
+              <p className="text-[12px] text-muted">{singerStatus(state, p.id) ?? (p.role === 'host' ? 'Host' : 'Joined')}</p>
             </div>
             {p.role === 'host' && <StatusPill>Host</StatusPill>}
           </div>
@@ -48,7 +48,7 @@ export default function GuestRoomPage() {
         {room.guests_can_skip ? 'Guests can skip the current song.' : 'You can skip your own song.'}
       </Note>
 
-      <p className="text-[12px] leading-[1.45] text-muted">
+      <p className="text-[14px] leading-[1.45] text-muted">
         Want to run the room? Ask {host?.display_name ?? 'the host'} to make you the host from their Guests tab. This
         phone switches over on its own.
       </p>

@@ -187,7 +187,7 @@ function FullscreenToggle({ sideways }: { sideways?: { on: boolean; toggle: () =
     <button
       type="button"
       onClick={toggle}
-      className={`fixed top-3 left-3 z-50 flex min-h-11 max-w-[calc(100cqw-24px)] items-center gap-2 rounded-full bg-bg/90 px-4 py-2 text-left text-[13px] font-semibold transition-opacity duration-300 ${
+      className={`fixed top-3 left-3 z-50 flex min-h-11 max-w-[calc(100cqw-24px)] items-center gap-2 rounded-full bg-bg/90 px-4 py-2 text-left text-[14px] font-semibold transition-opacity duration-300 ${
         shown ? 'opacity-100' : 'pointer-events-none opacity-0'
       }`}>
       <Icon src={isFull ? icons.minimize : icons.maximize} size={16} />
@@ -271,10 +271,10 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
         This screen plays the karaoke videos and shows the invite between songs. Enter the room code from the host’s
         phone or the Invite page.
       </p>
-      {notice && <p className="rounded-xl bg-surface p-3 text-[13px] text-muted">{notice}</p>}
+      {notice && <p className="rounded-xl bg-surface p-3 text-[14px] text-muted">{notice}</p>}
       {hosting ? (
         <>
-          <p className="rounded-xl bg-surface p-3 text-[13px] leading-[1.45] text-muted">
+          <p className="rounded-xl bg-surface p-3 text-[14px] leading-[1.45] text-muted">
             This phone is hosting {hosting.name ?? 'a room'}. Hand off hosting to a guest before using it as the
             screen, so the room always has a host.
           </p>
@@ -302,16 +302,16 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
           >
             {connect.isPending ? 'Connecting…' : 'Use as the display'}
           </Button>
-          <p className="text-center text-[12px] text-muted">Using it as the display replaces the screen that’s playing now.</p>
+          <p className="text-center text-[14px] text-muted">Using it as the display replaces the screen that’s playing now.</p>
           <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
-          <button type="button" onClick={() => setChoosing(false)} className="py-1 text-[13px] text-accent">
+          <button type="button" onClick={() => setChoosing(false)} className="py-2 text-[14px] text-accent">
             Change code
           </button>
         </div>
       ) : (
         <>
           {prefilled && !notice && (
-            <p className="rounded-xl bg-surface p-3 text-[13px] text-muted">
+            <p className="rounded-xl bg-surface p-3 text-[14px] text-muted">
               Connecting will replace any screen already in this room.
             </p>
           )}
@@ -390,7 +390,7 @@ function Invitation({ state, onDisconnect }: { state: RoomState; onDisconnect: (
         </div>
         <JoinCode state={state} size="w-[28cqw] max-w-[60cqh]" />
       </div>
-      <button type="button" onClick={onDisconnect} className="fixed right-4 bottom-4 text-[12px] text-muted/60 hover:text-muted">
+      <button type="button" onClick={onDisconnect} className="fixed right-4 bottom-4 text-[14px] text-muted/60 hover:text-muted">
         Disconnect this screen
       </button>
     </main>

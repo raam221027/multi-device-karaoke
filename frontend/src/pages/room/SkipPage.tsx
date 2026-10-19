@@ -41,7 +41,7 @@ export default function SkipPage() {
           </>
         }
       >
-        <p className="-mt-3 text-[14px] leading-[1.45] text-muted">
+        <p className="-mt-3 text-[15px] leading-[1.45] text-muted">
           {songName(current)} will end now and leave the queue.{' '}
           {mine ? 'The mic passes to whoever is next.' : `Check that ${singer} is ready to pass the mic.`}
         </p>
@@ -50,7 +50,7 @@ export default function SkipPage() {
           <Avatar id={current.added_by.id} name={current.added_by.display_name} size={38} />
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <p className="truncate text-[15px] font-bold">{songName(current)}</p>
-            <p className="text-[12px] text-muted">
+            <p className="text-[14px] text-muted">
               {current.added_by.display_name} · {formatDuration(elapsed)} / {formatDuration(current.duration_seconds)}
             </p>
           </div>
@@ -63,17 +63,17 @@ export default function SkipPage() {
               <Avatar id={next.added_by.id} name={next.added_by.display_name} size={38} />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <p className="truncate text-[15px] font-bold">{songName(next)}</p>
-                <p className="truncate text-[12px] text-muted">
+                <p className="truncate text-[14px] text-muted">
                   {[next.added_by.display_name, songArtist(next)].filter(Boolean).join(' · ')}
                 </p>
               </div>
             </div>
-            <p className="text-[11px] leading-[1.45] text-muted">
+            <p className="text-[13px] leading-[1.45] text-muted">
               The TV may need a tap to start the next video with sound.
             </p>
           </div>
         ) : (
-          <p className="text-[12px] leading-[1.45] text-muted">
+          <p className="text-[14px] leading-[1.45] text-muted">
             Nothing is queued after this. The TV goes back to the invitation until someone adds a song.
           </p>
         )}

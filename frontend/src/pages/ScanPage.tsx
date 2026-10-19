@@ -104,7 +104,7 @@ export default function ScanPage() {
         </Link>
         <div className="flex flex-col">
           <h1 className="text-[20px] font-bold">Scan the QR on the TV</h1>
-          <p className="text-[13px] text-muted">or on the host’s phone</p>
+          <p className="text-[14px] text-muted">or on the host’s phone</p>
         </div>
       </header>
 
@@ -114,7 +114,7 @@ export default function ScanPage() {
             <Icon src={icons.info} size={18} />
             <h2 className="text-[15px] font-bold">{camera.problem}</h2>
           </div>
-          <p className="text-[13px] leading-[1.45] text-muted">
+          <p className="text-[14px] leading-[1.45] text-muted">
             Point your phone’s camera app at the QR instead, or type the room code shown under it.
           </p>
         </Card>
@@ -123,7 +123,7 @@ export default function ScanPage() {
           <div className="relative aspect-square overflow-hidden rounded-3xl bg-surface">
             <video ref={videoRef} playsInline muted className="absolute inset-0 size-full object-cover" />
             {camera === 'starting' && (
-              <p className="absolute inset-0 flex items-center justify-center text-[13px] text-muted">Opening camera…</p>
+              <p className="absolute inset-0 flex items-center justify-center text-[14px] text-muted">Opening camera…</p>
             )}
             <div aria-hidden className="pointer-events-none absolute inset-[18%]">
               <span className="absolute top-0 left-0 size-8 rounded-tl-xl border-t-4 border-l-4 border-accent" />
@@ -132,7 +132,7 @@ export default function ScanPage() {
               <span className="absolute right-0 bottom-0 size-8 rounded-br-xl border-r-4 border-b-4 border-accent" />
             </div>
           </div>
-          <p aria-live="polite" className={`text-center text-[13px] ${wrongQr ? 'text-danger' : 'text-muted'}`}>
+          <p aria-live="polite" className={`text-center text-[14px] ${wrongQr ? 'text-danger' : 'text-muted'}`}>
             {wrongQr ? 'That QR isn’t a Videokehan room. Try the one on the TV.' : 'Hold the QR inside the frame.'}
           </p>
         </>

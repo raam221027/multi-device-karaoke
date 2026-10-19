@@ -21,7 +21,7 @@ function ServerWarning() {
   })
 
   if (health.isPending || (health.data?.status === 'ok' && health.data.db)) return null
-  return <p className="text-center text-[11px] text-danger">Can’t reach the server right now.</p>
+  return <p className="text-center text-[13px] text-danger">Can’t reach the server right now.</p>
 }
 
 function ResumeSession() {
@@ -38,7 +38,7 @@ function ResumeSession() {
   const to = participant.role === 'host' ? `/host/${room.id}` : `/room/${room.id}`
 
   return (
-    <Link to={to} className="flex items-center justify-between gap-3 rounded-2xl bg-accent-soft p-4 text-[13px] text-accent">
+    <Link to={to} className="flex items-center justify-between gap-3 rounded-2xl bg-accent-soft p-4 text-[14px] text-accent">
       <span>
         Back to <strong>{room.name ?? room.code}</strong> as {participant.display_name}
       </span>
@@ -52,7 +52,7 @@ function ContactFooter() {
   const { status, copy } = useShare()
 
   return (
-    <p className="text-center text-[10px] leading-[1.45] text-muted">
+    <p className="text-center text-[12px] leading-[1.45] text-muted">
       © {new Date().getFullYear()} Videokehan · Contact:{' '}
       <a
         href={`https://mail.google.com/mail/?view=cm&to=${CONTACT_EMAIL}`}
@@ -103,13 +103,13 @@ export default function HomePage() {
         </div>
       </header>
 
-      {notice && <p className="rounded-xl bg-surface p-3 text-center text-[13px] text-muted">{notice}</p>}
+      {notice && <p className="rounded-xl bg-surface p-3 text-center text-[14px] text-muted">{notice}</p>}
 
       <div className="relative h-[278px] overflow-hidden rounded-3xl">
         <img src={friendsSinging} alt="Friends singing karaoke together at home" className="absolute inset-0 size-full object-cover" />
         <div className="absolute bottom-4 left-4 flex items-center gap-[7px] rounded-full bg-bg px-3 py-2">
           <Icon src={icons.sparkles} size={14} />
-          <span className="text-[11px] font-semibold">Your friends. Your songs. Your Videokehan.</span>
+          <span className="text-[13px] font-semibold">Your friends. Your songs. Your Videokehan.</span>
         </div>
       </div>
 
@@ -176,15 +176,15 @@ export default function HomePage() {
         </ButtonLink>
 
         {/* No TV? A spare phone, tablet or laptop can play the videos instead. */}
-        <Link to="/display" className="flex items-center justify-center gap-2 py-1 text-[13px] text-accent">
+        <Link to="/display" className="flex items-center justify-center gap-2 py-2 text-[14px] text-accent">
           <Icon src={icons.monitor} size={16} />
           Use this device as the screen
         </Link>
 
-        <p className="text-center text-[12px] leading-[1.45] text-muted">No downloads. No account needed to join.</p>
+        <p className="text-center text-[14px] leading-[1.45] text-muted">No downloads. No account needed to join.</p>
       </div>
 
-      <ol className="flex justify-between pt-2 text-[11px]">
+      <ol className="flex justify-between pt-2 text-[13px]">
         {['Create a room', 'Invite your people', 'Sing together'].map((step, i) => (
           <li key={step} className="flex flex-col gap-1.5">
             <span className="font-bold text-accent">0{i + 1}</span>
@@ -194,7 +194,7 @@ export default function HomePage() {
       </ol>
 
       <ServerWarning />
-      <p className="text-center text-[10px] leading-[1.45] text-muted">Karaoke videos powered by YouTube · Browser-based</p>
+      <p className="text-center text-[12px] leading-[1.45] text-muted">Karaoke videos powered by YouTube · Browser-based</p>
       <ContactFooter />
     </main>
   )

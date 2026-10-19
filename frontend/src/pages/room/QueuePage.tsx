@@ -96,7 +96,7 @@ export default function QueuePage() {
           <Avatar id={queue.current.added_by.id} name={queue.current.added_by.display_name} size={38} />
           <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
             <p className="truncate text-[15px] font-bold">{songName(queue.current)}</p>
-            <p className="truncate text-[12px] text-muted">
+            <p className="truncate text-[14px] text-muted">
               {[
                 songArtist(queue.current),
                 queue.current.video_swaps > 0 && 'another version',
@@ -111,14 +111,14 @@ export default function QueuePage() {
 
       <section className="flex flex-col gap-0.5">
         <SectionHeading title={`${plural(queue.upcoming.length, 'song')} waiting`} aside={wait} />
-        <p className="text-[12px] leading-[1.45] text-muted">
+        <p className="text-[14px] leading-[1.45] text-muted">
           {isHost
             ? 'Drag a handle to reorder. Changes are shared with everyone in the room.'
             : 'Songs play in this order. You can remove your own.'}
         </p>
 
         {queue.upcoming.length === 0 && (
-          <p className="py-[13px] text-[13px] text-muted">The queue is empty. Be the first to add a song.</p>
+          <p className="py-[13px] text-[14px] text-muted">The queue is empty. Be the first to add a song.</p>
         )}
 
         <ul onPointerMove={reorder.handlers.onPointerMove} onPointerUp={reorder.handlers.onPointerUp}>
@@ -174,7 +174,7 @@ export default function QueuePage() {
         Find another song
       </ButtonLink>
 
-      <p className="text-center text-[11px] leading-[1.45] text-muted">
+      <p className="text-center text-[13px] leading-[1.45] text-muted">
         {isHost ? 'Host controls · Guests can only remove their own songs.' : 'Only the host can reorder the queue.'}
       </p>
     </Screen>

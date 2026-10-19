@@ -45,23 +45,23 @@ export default function RemoveSongPage() {
           </>
         }
       >
-        <p className="-mt-3 text-[14px] leading-[1.45] text-muted">
+        <p className="-mt-3 text-[15px] leading-[1.45] text-muted">
           This takes {owner} song out of the shared queue for everyone.
         </p>
 
         <div className="flex flex-col gap-4 rounded-[14px] bg-bg p-[18px]">
           <StatusPill>{ordinal(index + 1)} in the queue</StatusPill>
           <p className="text-[23px] font-bold">{songName(item)}</p>
-          <p className="text-[13px] text-muted">{songMeta(item)}</p>
+          <p className="text-[14px] text-muted">{songMeta(item)}</p>
           <div className="flex items-center gap-2.5">
             <Avatar id={item.added_by.id} name={item.added_by.display_name} size={32} />
-            <span className="text-[12px] text-muted">Added by {mine ? 'you' : item.added_by.display_name}</span>
+            <span className="text-[14px] text-muted">Added by {mine ? 'you' : item.added_by.display_name}</span>
           </div>
         </div>
 
         <div className="flex items-start gap-2.5">
           <Icon src={icons.music2} size={18} />
-          <p className="flex-1 text-[12px] leading-[1.45] text-muted">
+          <p className="flex-1 text-[14px] leading-[1.45] text-muted">
             {current
               ? `${current.added_by.id === state.me.id ? 'You keep' : `${current.added_by.display_name} keeps`} singing ${songName(current)}. `
               : ''}

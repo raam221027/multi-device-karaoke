@@ -83,7 +83,7 @@ function ResultRow({
         {thumbFailed ? (
           <div className="flex h-[54px] w-24 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[10px] bg-surface-2 p-2">
             <Icon src={art.icon} size={22} />
-            <span className={`max-w-full truncate text-[10px] ${art.text}`}>{artist ?? video.channel_title}</span>
+            <span className={`max-w-full truncate text-[12px] ${art.text}`}>{artist ?? video.channel_title}</span>
           </div>
         ) : (
           <img
@@ -96,10 +96,10 @@ function ResultRow({
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
           <p className="line-clamp-2 text-[15px] font-bold">{song}</p>
-          <p className="truncate text-[11px] text-muted">
+          <p className="truncate text-[13px] text-muted">
             {[artist, isKaraoke && 'Karaoke', formatDuration(video.duration_seconds)].filter(Boolean).join(' · ')}
           </p>
-          <p className="truncate text-[10px] text-muted">{video.channel_title} · YouTube</p>
+          <p className="truncate text-[12px] text-muted">{video.channel_title} · YouTube</p>
         </div>
         {inRoom ? (
           <span
@@ -120,7 +120,7 @@ function ResultRow({
           </button>
         )}
       </div>
-      {inRoomNote && <p className="text-[11px] font-semibold text-accent">{inRoomNote}</p>}
+      {inRoomNote && <p className="text-[13px] font-semibold text-accent">{inRoomNote}</p>}
     </li>
   )
 }
@@ -292,8 +292,8 @@ export default function SearchPage() {
                 >
                   <Icon src={s.type === 'artist' ? icons.micVocal : icons.music2} size={18} />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[14px] font-semibold">{s.label}</span>
-                    <span className="truncate text-[11px] text-muted">{s.type === 'artist' ? 'Artist' : s.artist}</span>
+                    <span className="truncate text-[15px] font-semibold">{s.label}</span>
+                    <span className="truncate text-[13px] text-muted">{s.type === 'artist' ? 'Artist' : s.artist}</span>
                   </span>
                 </button>
               </li>
@@ -307,13 +307,13 @@ export default function SearchPage() {
           type="button"
           aria-pressed={karaoke}
           onClick={() => setKaraoke(!karaoke)}
-          className={`rounded-full px-[9px] py-[5px] text-[10px] font-bold uppercase ${
+          className={`rounded-full px-[9px] py-[5px] text-[12px] font-bold uppercase ${
             karaoke ? 'bg-accent-soft text-accent' : 'bg-surface-2 text-muted'
           }`}
         >
           Karaoke videos
         </button>
-        <span className="text-[12px] text-muted">Results from YouTube</span>
+        <span className="text-[14px] text-muted">Results from YouTube</span>
       </div>
 
       {!canAdd && (
@@ -332,7 +332,7 @@ export default function SearchPage() {
           />
           <ErrorText>{results.isError && errorMessage(results.error)}</ErrorText>
           {found?.length === 0 && (
-            <p className="py-3.5 text-[13px] text-muted">No embeddable videos found. Try another spelling.</p>
+            <p className="py-3.5 text-[14px] text-muted">No embeddable videos found. Try another spelling.</p>
           )}
           {found && songRows(found)}
           {results.hasNextPage && (
@@ -359,7 +359,7 @@ export default function SearchPage() {
                   key={idea}
                   type="button"
                   onClick={() => searchFor(idea)}
-                  className="rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-semibold hover:border-accent"
+                  className="rounded-full border border-line bg-surface px-3.5 py-2 text-[14px] font-semibold hover:border-accent"
                 >
                   {idea}
                 </button>
@@ -370,9 +370,9 @@ export default function SearchPage() {
           <section ref={popularRef} className="flex scroll-mt-4 flex-col">
             <SectionHeading title="Popular karaoke" aside={suggestions.isFetching ? 'Loading…' : null} />
             {suggestions.data?.popular.length === 0 && (
-              <p className="py-3.5 text-[13px] text-muted">Popular picks aren’t available right now. Try a search instead.</p>
+              <p className="py-3.5 text-[14px] text-muted">Popular picks aren’t available right now. Try a search instead.</p>
             )}
-            {suggestions.isError && <p className="py-3.5 text-[13px] text-muted">Couldn’t load suggestions.</p>}
+            {suggestions.isError && <p className="py-3.5 text-[14px] text-muted">Couldn’t load suggestions.</p>}
             {suggestions.data && songRows(suggestions.data.popular)}
             {suggestions.data && suggestions.data.pages > 1 && (
               <Button variant="secondary" className="mt-4" onClick={morePopular} disabled={suggestions.isFetching}>
@@ -385,14 +385,14 @@ export default function SearchPage() {
       )}
 
       <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-        <p className="text-[13px]">Adding as {me.display_name} · You</p>
-        <p className="text-[12px] leading-[1.45] text-muted">
+        <p className="text-[14px]">Adding as {me.display_name} · You</p>
+        <p className="text-[14px] leading-[1.45] text-muted">
           Tap + to add a video to the end of the shared queue.{' '}
           {isHost ? 'Guests add from their own phones.' : 'Your name shows on the TV when it’s your turn.'}
         </p>
       </section>
 
-      <p className="text-[11px] leading-[1.45] text-muted">
+      <p className="text-[13px] leading-[1.45] text-muted">
         Videos play on the TV display in the YouTube player. Availability may vary.
       </p>
     </Screen>

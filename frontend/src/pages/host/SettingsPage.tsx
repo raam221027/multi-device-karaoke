@@ -21,8 +21,8 @@ function Permission({
   return (
     <div className="flex items-center gap-4 border-b border-line py-[15px]">
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="text-[14px]">{title}</p>
-        <p className="text-[12px] leading-[1.45] text-muted">{detail}</p>
+        <p className="text-[15px]">{title}</p>
+        <p className="text-[14px] leading-[1.45] text-muted">{detail}</p>
       </div>
       <Toggle checked={checked} onChange={onChange} label={title} />
     </div>
@@ -61,7 +61,7 @@ export default function SettingsPage() {
       <section className="flex flex-col gap-[14px] rounded-2xl bg-surface p-4">
         {editing ? (
           <form onSubmit={onRename} className="flex flex-col gap-2">
-            <label htmlFor="room-name" className="text-[12px] text-muted">
+            <label htmlFor="room-name" className="text-[14px] text-muted">
               Room name
             </label>
             <input
@@ -78,7 +78,7 @@ export default function SettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-[7px]">
               <p className="truncate text-[17px] font-bold">{value.name ?? 'Your room'}</p>
-              <p className="text-[12px] text-muted">
+              <p className="text-[14px] text-muted">
                 {room.code} · {plural(phones(state.participants).length, 'person', 'people')}
               </p>
             </div>
@@ -94,7 +94,7 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
-        <Link to={`${base}/invite`} className="text-[13px] text-accent">
+        <Link to={`${base}/invite`} className="py-2 text-[14px] text-accent">
           View QR &amp; share invitation →
         </Link>
       </section>
@@ -136,7 +136,7 @@ export default function SettingsPage() {
 
       <section className="flex flex-col gap-3">
         <SectionHeading title="Playback" />
-        <p className="text-[12px] leading-[1.45] text-muted">
+        <p className="text-[14px] leading-[1.45] text-muted">
           Videos play on one screen: a TV, laptop, tablet or spare phone. Keep that browser tab open and the screen
           awake; it may need one tap to start the sound. Connecting another screen moves playback there.
         </p>
@@ -149,7 +149,7 @@ export default function SettingsPage() {
 
       <section className="flex flex-col gap-3 rounded-2xl border border-danger-soft p-4">
         <h2 className="text-[16px] font-bold">Calling it a night?</h2>
-        <p className="text-[12px] leading-[1.45] text-muted">
+        <p className="text-[14px] leading-[1.45] text-muted">
           Closing stops playback, clears the queue and ends the room for everyone.
         </p>
         <ButtonLink to={`${base}/close`} variant="danger" icon={icons.power}>

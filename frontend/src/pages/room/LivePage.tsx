@@ -27,7 +27,7 @@ export default function LivePage() {
 
       <div className="flex items-center justify-between gap-3">
         <StatusPill>{!queue.current ? 'Waiting for a song' : paused ? 'Playback paused' : 'Live session'}</StatusPill>
-        <span className="text-[12px] text-muted">
+        <span className="text-[14px] text-muted">
           {plural(phones(state.participants).length, 'person', 'people')} ·{' '}
           {plural(queue.upcoming.length, 'song')} waiting
         </span>
@@ -40,7 +40,7 @@ export default function LivePage() {
           <Icon src={icons.micVocal} size={25} />
           <div className="flex flex-col gap-2">
             <h2 className="text-[22px] font-bold">The mic is free.</h2>
-            <p className="text-[14px] leading-[1.45] text-muted">
+            <p className="text-[15px] leading-[1.45] text-muted">
               Pick a song and it starts on the TV right away. {isHost && 'The host sings too.'}
             </p>
           </div>
@@ -53,7 +53,7 @@ export default function LivePage() {
       {isHost && !state.display_connected && (
         <Link
           to={`${base}/invite/tv`}
-          className="flex items-center gap-2.5 rounded-xl bg-surface p-3.5 text-[12px] leading-[1.45] text-muted"
+          className="flex items-center gap-2.5 rounded-xl bg-surface p-3.5 text-[14px] leading-[1.45] text-muted"
         >
           <Icon src={icons.monitor} size={18} />
           <span className="flex-1">Songs play on a TV or laptop. No display is connected yet.</span>
@@ -63,7 +63,7 @@ export default function LivePage() {
 
       {isHost && queue.current && (
         <section className="flex flex-col gap-3 rounded-2xl border border-line p-3.5">
-          <p className="text-[10px] font-bold text-muted">HOST CONTROLS</p>
+          <p className="text-[12px] font-bold text-muted">HOST CONTROLS</p>
           <div className="flex gap-2.5">
             <Button
               className="flex-1"
@@ -78,12 +78,12 @@ export default function LivePage() {
             </Button>
           </div>
           <ErrorText>{togglePause.isError && errorMessage(togglePause.error)}</ErrorText>
-          <p className="text-[11px] leading-[1.45] text-muted">
+          <p className="text-[13px] leading-[1.45] text-muted">
             {paused
               ? 'Tap Resume to continue. If the TV doesn’t respond, tap play on the TV.'
               : 'Pause and resume control the video on the TV display.'}
           </p>
-          <p className="text-[10px] text-muted">
+          <p className="text-[12px] text-muted">
             Skip asks for confirmation before moving {next ? `to ${next.added_by.display_name}` : 'on'}.
           </p>
         </section>
@@ -105,14 +105,14 @@ export default function LivePage() {
           }
         />
         {queue.upcoming.length === 0 ? (
-          <p className="py-[13px] text-[13px] text-muted">Nothing queued yet. Add a song to keep the night going.</p>
+          <p className="py-[13px] text-[14px] text-muted">Nothing queued yet. Add a song to keep the night going.</p>
         ) : (
           queue.upcoming.slice(0, 2).map((item, i) => (
             <QueueRow
               key={item.id}
               item={item}
               meId={me.id}
-              leading={<span className="w-[15px] shrink-0 text-[13px] text-muted">{i + 1}</span>}
+              leading={<span className="w-[15px] shrink-0 text-[14px] text-muted">{i + 1}</span>}
             />
           ))
         )}

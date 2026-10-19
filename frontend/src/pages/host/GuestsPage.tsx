@@ -47,7 +47,7 @@ export default function GuestsPage() {
       <Lead>Keep the good times flowing. Decide who can add songs, remove a guest, or make someone else the host.</Lead>
 
       <section>
-        <div className="flex gap-3 pb-2 text-[10px] text-muted">
+        <div className="flex gap-3 pb-2 text-[12px] text-muted">
           <span className="flex-1">IN THE ROOM</span>
           <span className="w-12 text-center">Can add</span>
           <span className="w-11 text-center">Remove</span>
@@ -57,8 +57,8 @@ export default function GuestsPage() {
           <div className="flex items-center gap-2.5 border-b border-line py-3.5">
             <Avatar id={host.id} name={host.display_name} size={36} />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <p className="truncate text-[14px]">{host.id === me.id ? `${host.display_name} · You` : host.display_name}</p>
-              <p className="text-[10px] text-muted">{singerStatus(state, host.id) ?? 'Host'}</p>
+              <p className="truncate text-[15px]">{host.id === me.id ? `${host.display_name} · You` : host.display_name}</p>
+              <p className="text-[12px] text-muted">{singerStatus(state, host.id) ?? 'Host'}</p>
             </div>
             <div className="flex w-[102px] justify-end">
               <StatusPill>Host</StatusPill>
@@ -72,8 +72,8 @@ export default function GuestsPage() {
             <div key={guest.id} className="flex items-center gap-2.5 border-b border-line py-3.5">
               <Avatar id={guest.id} name={guest.display_name} size={36} />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <p className="truncate text-[14px]">{guest.display_name}</p>
-                <p className="truncate text-[10px]">
+                <p className="truncate text-[15px]">{guest.display_name}</p>
+                <p className="truncate text-[12px]">
                   <span className={canAdd ? 'text-muted' : 'text-danger'}>
                     {canAdd ? (singerStatus(state, guest.id) ?? 'Joined') : 'Song additions blocked'}
                   </span>
@@ -105,8 +105,8 @@ export default function GuestsPage() {
               <Icon src={icons.monitor} size={18} />
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <p className="truncate text-[14px]">{displayLabel(display)}</p>
-              <p className="text-[10px]">
+              <p className="truncate text-[15px]">{displayLabel(display)}</p>
+              <p className="text-[12px]">
                 <span className="text-muted">Plays the videos · </span>
                 <Link to={`${base}/invite/tv`} className="font-semibold text-accent">
                   Switch display
@@ -124,7 +124,7 @@ export default function GuestsPage() {
         )}
 
         {guests.length === 0 && (
-          <p className="py-3.5 text-[13px] text-muted">No guests yet. Share the invite and they’ll show up here.</p>
+          <p className="py-3.5 text-[14px] text-muted">No guests yet. Share the invite and they’ll show up here.</p>
         )}
         <ErrorText>{toggle.isError && errorMessage(toggle.error)}</ErrorText>
       </section>

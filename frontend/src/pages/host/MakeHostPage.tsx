@@ -31,7 +31,7 @@ export default function MakeHostPage() {
 
         <div className="flex flex-col gap-3 text-center">
           <h2 className="text-[28px] font-bold">Make {guest.display_name} the host?</h2>
-          <p className="text-[14px] leading-[1.45] text-muted">
+          <p className="text-[15px] leading-[1.45] text-muted">
             {guest.display_name}’s phone gets the room settings, the guest list, the screen and playback controls. You
             stay in the room as a guest and keep your songs.
           </p>
@@ -40,7 +40,7 @@ export default function MakeHostPage() {
         <div className="flex flex-col gap-[15px] rounded-[14px] bg-bg p-4">
           <div className="flex items-start gap-2.5">
             <Icon src={icons.shieldCheck} size={18} />
-            <p className="flex-1 text-[12px] leading-[1.45] text-muted">
+            <p className="flex-1 text-[14px] leading-[1.45] text-muted">
               Only {guest.display_name} can hand it back. Moving to your other phone? Join from it as a guest first,
               then pick it here.
             </p>

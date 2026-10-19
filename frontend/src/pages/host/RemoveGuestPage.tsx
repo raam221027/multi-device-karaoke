@@ -48,7 +48,7 @@ export default function RemoveGuestPage() {
           <h2 className="text-[28px] font-bold">
             {isDisplay ? `Disconnect ${displayLabel(guest)}?` : `Remove ${guest.display_name}?`}
           </h2>
-          <p className="text-[14px] leading-[1.45] text-muted">
+          <p className="text-[15px] leading-[1.45] text-muted">
             {isDisplay
               ? 'It stops playing and goes back to its connect screen. Everyone keeps their place in the queue. To move playback instead, just connect the new screen.'
               : `${guest.display_name}’s current browser session will lose access to this room. Everyone else keeps singing.`}
@@ -59,7 +59,7 @@ export default function RemoveGuestPage() {
           <div className="flex flex-col gap-[15px] rounded-[14px] bg-bg p-4">
             <div className="flex items-start gap-2.5">
               <Icon src={icons.listMusicMuted} size={18} />
-              <p className="flex-1 text-[12px] leading-[1.45] text-muted">
+              <p className="flex-1 text-[14px] leading-[1.45] text-muted">
                 {waiting === 0
                   ? `${guest.display_name} has no songs waiting. No songs will be removed.`
                   : `${guest.display_name}’s ${plural(waiting, 'waiting song')} will be removed.`}
@@ -68,7 +68,7 @@ export default function RemoveGuestPage() {
             </div>
             <div className="flex items-start gap-2.5">
               <Icon src={icons.link} size={18} />
-              <p className="flex-1 text-[12px] leading-[1.45] text-muted">
+              <p className="flex-1 text-[14px] leading-[1.45] text-muted">
                 The invite link stays active. To stop new joins, turn on “Lock room &amp; hide QR code” in Room.
               </p>
             </div>
@@ -96,7 +96,7 @@ export default function RemoveGuestPage() {
       </section>
 
       {!isDisplay && (
-        <p className="text-center text-[12px] leading-[1.45] text-muted">
+        <p className="text-center text-[14px] leading-[1.45] text-muted">
           {guest.can_add_songs
             ? `Just want to stop new songs? Turn off ${guest.display_name}’s “Can add” permission instead.`
             : `Just want to stop new songs? ${guest.display_name}’s “Can add” permission is already off.`}

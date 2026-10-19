@@ -6,11 +6,9 @@ import * as icons from '../assets/icons'
 import { Button, ButtonLink, ErrorText, Icon, TextInput } from '../components/ui'
 import { api, getToken } from '../lib/api'
 import { createRoom, errorMessage, getMe, normalizeCode } from '../lib/rooms'
-import { useShare } from '../lib/share'
+import { CONTACT_EMAIL, useShare } from '../lib/share'
 
 type Health = { status: string; db: boolean; time: string }
-
-const CONTACT_EMAIL = 'raam221027@gmail.com'
 
 /** Only speaks up when the server can't be reached. */
 function ServerWarning() {
@@ -63,6 +61,14 @@ function ContactFooter() {
       >
         {status === 'copied' ? 'Email copied!' : CONTACT_EMAIL}
       </a>
+      <br />
+      <Link to="/privacy" className="inline-block py-2 text-accent">
+        Privacy
+      </Link>
+      {' · '}
+      <Link to="/terms" className="inline-block py-2 text-accent">
+        Terms
+      </Link>
     </p>
   )
 }

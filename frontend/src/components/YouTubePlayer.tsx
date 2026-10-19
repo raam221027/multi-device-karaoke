@@ -18,7 +18,7 @@ type YTNamespace = {
       playerVars?: Record<string, number | string>
       events?: {
         onReady?: (e: { target: YTPlayer }) => void
-        onStateChange?: (e: { data: number }) => void
+        onStateChange?: (e: { data: number; target: YTPlayer }) => void
         onError?: (e: { data: number }) => void
       }
     },
@@ -33,6 +33,7 @@ declare global {
 }
 
 const PLAYING = 1
+const PAUSED = 2
 const ENDED = 0
 const BUFFERING = 3
 
@@ -148,6 +149,11 @@ export default function YouTubePlayer({
               clearTimeout(blockedTimer.current)
               latest.current.onBlocked?.(false)
             }
+            // Nothing covers the video, so a tap on the screen can pause or play it.
+            // The host's pause button is in charge: undo anything else.
+            const shouldPlay = !latest.current.paused && !latest.current.idle
+            if (e.data === PAUSED && shouldPlay) e.target.playVideo()
+            if (e.data === PLAYING && !shouldPlay) e.target.pauseVideo()
             const id = loadedItem.current
             const key = `${id}:${loadedVideo.current}`
             if (e.data === PLAYING && reportedStart.current !== key) {

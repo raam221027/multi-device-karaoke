@@ -102,7 +102,7 @@ export default function SettingsPage() {
       <section className="flex flex-col">
         <SectionHeading title="Guest permissions" aside={save.isPending ? 'Saving…' : 'Saved automatically'} />
         <Permission
-          title="Lock room & hide QR code"
+          title="Lock the room"
           detail={
             value.is_locked
               ? 'Locked. The QR code is hidden and nobody new can join.'

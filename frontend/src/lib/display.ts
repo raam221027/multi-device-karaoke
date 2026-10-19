@@ -88,6 +88,11 @@ export function deviceType(): 'Mobile' | 'Tablet' | 'PC' | 'TV' {
   return 'PC'
 }
 
+/** "phone", "tablet", "PC" or "TV", for sentences like "use this PC as the display". */
+export function deviceNoun(): string {
+  return { Mobile: 'phone', Tablet: 'tablet', PC: 'PC', TV: 'TV' }[deviceType()]
+}
+
 export async function connectDisplay(code: string): Promise<DisplaySession> {
   // A guest phone already in this room becomes the screen itself (same token),
   // so the room never sees one device as two people.

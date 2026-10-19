@@ -5,7 +5,7 @@ import * as icons from '../../assets/icons'
 import { useRoom } from '../../lib/roomContext'
 import { Avatar, Button, ButtonLink, ErrorText, Icon, Lead, Note, PageHeading, Screen } from '../../components/ui'
 import { setToken } from '../../lib/api'
-import { becomeDisplay, phoneBecomesDisplay } from '../../lib/display'
+import { becomeDisplay, deviceNoun, phoneBecomesDisplay } from '../../lib/display'
 import { displayLabel, singerStatus } from '../../lib/format'
 import { errorMessage } from '../../lib/rooms'
 
@@ -21,6 +21,7 @@ export default function BecomeScreenPage() {
   const guests = state.participants.filter((p) => p.role === 'guest')
   const candidates = screen ? [screen, ...guests] : guests
   const [picked, setPicked] = useState<number | null>(null)
+  const device = deviceNoun()
   const next = candidates.find((p) => p.id === picked) ?? null
   const nextName = (p: { role: string; display_name: string | null }) =>
     p.role === 'display' ? 'the current display' : (p.display_name ?? 'them')
@@ -37,9 +38,9 @@ export default function BecomeScreenPage() {
 
   return (
     <Screen>
-      <PageHeading back={{ to: `${base}/invite/tv`, label: 'Back to display setup' }} title="Use this phone as the display" />
+      <PageHeading back={{ to: `${base}/invite/tv`, label: 'Back to display setup' }} title={`Use this ${device} as the display`} />
       <Lead>
-        This phone will play the videos. Someone else takes over as host first, so the room is never without one. Their
+        This {device} will play the videos. Someone else takes over as host first, so the room is never without one. Their
         device stays connected and switches to the host controls within a few seconds.
       </Lead>
 
@@ -66,7 +67,7 @@ export default function BecomeScreenPage() {
               <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <span className="truncate text-[15px]">{isScreen ? displayLabel(p) : p.display_name}</span>
                 <span className="text-[12px] text-muted">
-                  {isScreen ? 'Swap: it becomes the host, this phone the display' : (singerStatus(state, p.id) ?? 'Joined')}
+                  {isScreen ? `Swap: it becomes the host, this ${device} the display` : (singerStatus(state, p.id) ?? 'Joined')}
                 </span>
               </span>
               <span
@@ -88,7 +89,7 @@ export default function BecomeScreenPage() {
 
       <Note icon={icons.shieldCheck}>
         {screen && next && next.role !== 'display'
-          ? 'This phone replaces the current display. Your waiting songs stay in the queue.'
+          ? `This ${device} replaces the current display. Your waiting songs stay in the queue.`
           : 'Your waiting songs stay in the queue.'}
       </Note>
 
@@ -105,7 +106,7 @@ export default function BecomeScreenPage() {
           {handOff.isPending || handOff.isSuccess
             ? 'Switching…'
             : next
-              ? `Make ${nextName(next)} host & use this phone as display`
+              ? `Make ${nextName(next)} host & use this ${device} as display`
               : 'Pick the next host'}
         </Button>
       )}

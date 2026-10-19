@@ -69,7 +69,7 @@ export default function RemoveGuestPage() {
             <div className="flex items-start gap-2.5">
               <Icon src={icons.link} size={18} />
               <p className="flex-1 text-[14px] leading-[1.45] text-muted">
-                The invite link stays active. To stop new joins, turn on “Lock room &amp; hide QR code” in Room.
+                The invite link stays active. To stop new joins, turn on “Lock the room” in Room.
               </p>
             </div>
           </div>

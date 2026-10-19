@@ -19,6 +19,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -26,6 +27,11 @@ class RoomController extends Controller
 {
     public function store(CreateRoomRequest $request): JsonResponse
     {
+        // There's no scheduler, so a new room tidies up old ones, at most once an hour.
+        if (Cache::add('rooms:pruned-recently', true, now()->addHour())) {
+            Room::pruneOld();
+        }
+
         // Two hosts could draw the same unused code at once; the unique index
         // catches that and we simply draw again.
         [$room, $host] = retry(3, fn () => DB::transaction(function () use ($request) {

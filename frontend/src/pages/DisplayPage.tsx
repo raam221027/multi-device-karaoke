@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
-import padlock from '../assets/padlock.png'
+import Padlock from '../components/Padlock'
 import YouTubePlayer from '../components/YouTubePlayer'
 import { Button, ButtonLink, ErrorText, Icon, TextInput } from '../components/ui'
 import { ApiError, getToken } from '../lib/api'
@@ -22,7 +22,7 @@ import {
   setDisplaySession,
   type DisplaySession,
 } from '../lib/display'
-import { songName } from '../lib/format'
+import { shortSongName } from '../lib/format'
 import { errorMessage, getMe, normalizeCode } from '../lib/rooms'
 import { joinUrl, publicHost } from '../lib/share'
 import type { QueueItem, RoomState } from '../lib/types'
@@ -39,6 +39,9 @@ type WebkitDocument = Document & {
 const webkitDoc = document as WebkitDocument
 
 const isTouchScreen = () => navigator.maxTouchPoints > 0 || window.matchMedia('(any-pointer: coarse)').matches
+/** iPhone or iPad (iPadOS reports itself as a Mac; only the touch screen gives it away). */
+const isAppleTouch = () =>
+  /iPhone|iPod|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
 /** Opened from a Home Screen icon: already full screen, with no browser bars. */
 const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -126,52 +129,43 @@ function Stage({ sideways, children }: { sideways: boolean; children: ReactNode 
   )
 }
 
-/**
- * A fullscreen toggle for a phone or tablet screen, hidden until someone taps.
- * A call or a trip to the home screen drops fullscreen, so coming back shows it too.
- * With `sideways`, it turns the stage instead (iPhone Home Screen mode).
- */
-function FullscreenToggle({ sideways }: { sideways?: { on: boolean; toggle: () => void } }) {
-  const [realFull, setIsFull] = useState(() => !!fullscreenElement())
-  const isFull = sideways ? sideways.on : realFull
-  const landscape = useMediaQuery('(orientation: landscape)')
-  const [shown, setShown] = useState(false)
-  // Where fullscreen isn't possible, the button explains the Home Screen route instead.
-  const [tip, setTip] = useState(false)
-  const hideTimer = useRef<number | undefined>(undefined)
+type Sideways = { on: boolean; toggle: () => void }
 
-  function hideAfter(ms: number) {
-    clearTimeout(hideTimer.current)
-    hideTimer.current = window.setTimeout(() => {
-      setShown(false)
-      setTip(false)
-    }, ms)
-  }
+type Fullscreen = {
+  /** False when there's nothing to do (already sideways for real). */
+  available: boolean
+  isFull: boolean
+  /** The Home Screen tip, shown for a while where a page can't go full screen. */
+  tip: string | null
+  label: string
+  toggle: () => void
+}
+
+const HOME_SCREEN_TIP =
+  'iPhone browsers can’t go full screen. Tap Share → Add to Home Screen, then open Videokehan from there.'
+
+/**
+ * Full screen for a phone or tablet screen. With `sideways`, it turns the
+ * stage instead (iPhone Home Screen mode); where neither works it explains
+ * the Home Screen route.
+ */
+function useFullscreen(sideways?: Sideways): Fullscreen {
+  const [realFull, setRealFull] = useState(() => !!fullscreenElement())
+  const landscape = useMediaQuery('(orientation: landscape)')
+  const [tip, setTip] = useState(false)
+  const tipTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
-    const reveal = () => {
-      setShown(true)
-      hideAfter(TOGGLE_MS)
-    }
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') reveal()
-    }
-    const onFullscreen = () => setIsFull(!!fullscreenElement())
-
-    // touchstart too: some in-app browsers don't send pointer events.
-    for (const type of ['pointerdown', 'touchstart']) document.addEventListener(type, reveal, { passive: true })
-    document.addEventListener('visibilitychange', onVisible)
+    const onFullscreen = () => setRealFull(!!fullscreenElement())
     for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(type, onFullscreen)
     return () => {
-      clearTimeout(hideTimer.current)
-      for (const type of ['pointerdown', 'touchstart']) document.removeEventListener(type, reveal)
-      document.removeEventListener('visibilitychange', onVisible)
-      for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.removeEventListener(type, onFullscreen)
+      clearTimeout(tipTimer.current)
+      for (const type of ['fullscreenchange', 'webkitfullscreenchange'])
+        document.removeEventListener(type, onFullscreen)
     }
   }, [])
 
-  // Already sideways for real: there's nothing to turn.
-  if (sideways && landscape) return null
+  const isFull = sideways ? sideways.on : realFull
 
   function toggle() {
     if (sideways) sideways.toggle()
@@ -179,25 +173,80 @@ function FullscreenToggle({ sideways }: { sideways?: { on: boolean; toggle: () =
     else if (fullscreenSupported()) fillTouchScreen()
     else {
       setTip(true)
-      hideAfter(TIP_MS)
+      clearTimeout(tipTimer.current)
+      tipTimer.current = window.setTimeout(() => setTip(false), TIP_MS)
     }
   }
+
+  return {
+    // Already sideways for real: there's nothing to turn.
+    available: !(sideways && landscape),
+    isFull,
+    tip: tip ? HOME_SCREEN_TIP : null,
+    label: isFull ? 'Exit full screen' : sideways || fullscreenSupported() ? 'Full screen' : 'How to go full screen',
+    toggle,
+  }
+}
+
+/** The always-there button in the info area beside or under the video. */
+function FullscreenButton({ fullscreen, compact }: { fullscreen: Fullscreen; compact?: boolean }) {
+  if (!fullscreen.available) return null
+  return (
+    <div className={`flex w-full flex-col gap-1.5 ${compact ? 'mt-auto' : ''}`}>
+      <button
+        type="button"
+        onClick={fullscreen.toggle}
+        className={`flex w-full items-center justify-center gap-2 rounded-xl bg-surface font-semibold ${
+          compact ? 'min-h-10 px-2 text-[length:max(12px,1cqw)]' : 'min-h-12 px-4 text-[15px]'
+        }`}>
+        <Icon src={fullscreen.isFull ? icons.minimize : icons.maximize} size={16} />
+        {fullscreen.label}
+      </button>
+      {fullscreen.tip && <p className="text-center text-[13px] leading-snug text-muted">{fullscreen.tip}</p>}
+    </div>
+  )
+}
+
+/**
+ * Between songs: a floating toggle, hidden until someone taps. A call or a
+ * trip to the home screen drops fullscreen, so coming back shows it too.
+ * Never shown while a video plays: nothing may sit on top of the player.
+ */
+function FullscreenToggle({ fullscreen }: { fullscreen: Fullscreen }) {
+  const [shown, setShown] = useState(false)
+  const hideTimer = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    const reveal = () => {
+      setShown(true)
+      clearTimeout(hideTimer.current)
+      hideTimer.current = window.setTimeout(() => setShown(false), TOGGLE_MS)
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reveal()
+    }
+
+    // touchstart too: some in-app browsers don't send pointer events.
+    for (const type of ['pointerdown', 'touchstart']) document.addEventListener(type, reveal, { passive: true })
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(hideTimer.current)
+      for (const type of ['pointerdown', 'touchstart']) document.removeEventListener(type, reveal)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
+
+  if (!fullscreen.available) return null
 
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={fullscreen.toggle}
       className={`fixed top-3 left-3 z-50 flex min-h-11 max-w-[calc(100cqw-24px)] items-center gap-2 rounded-full bg-bg/90 px-4 py-2 text-left text-[14px] font-semibold transition-opacity duration-300 ${
-        shown ? 'opacity-100' : 'pointer-events-none opacity-0'
+        shown || fullscreen.tip ? 'opacity-100' : 'pointer-events-none opacity-0'
       }`}>
-      <Icon src={isFull ? icons.minimize : icons.maximize} size={16} />
-      {tip
-        ? 'iPhone browsers can’t go full screen. Tap Share → Add to Home Screen, then open Videokehan from there.'
-        : isFull
-          ? 'Exit full screen'
-          : sideways || fullscreenSupported()
-            ? 'Full screen'
-            : 'How to go full screen'}
+      <Icon src={fullscreen.isFull ? icons.minimize : icons.maximize} size={16} />
+      {fullscreen.tip ?? fullscreen.label}
     </button>
   )
 }
@@ -345,18 +394,12 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
 function JoinCode({ state, size }: { state: RoomState; size: string }) {
   const { room } = state
   if (room.is_locked) {
-    // The PNG is a black padlock, so it's used as a mask and painted in the ink color to show on the dark screen.
-    // The words sit inside the lock's body, sized against the padlock's own width.
+    // As wide as the QR code's whole box, white border included, so swapping one for the other keeps the size.
     return (
-      <div role="img" aria-label="Room locked. The host isn’t letting new people in." className={`@container relative aspect-square shrink-0 ${size}`}>
-        <div
-          className="absolute inset-0 bg-ink"
-          style={{ mask: `url(${padlock}) center / contain no-repeat`, WebkitMask: `url(${padlock}) center / contain no-repeat` }}
-        />
-        <p className="absolute inset-x-[9%] top-[45%] bottom-[10%] flex flex-col items-center justify-center text-center text-[16cqw] leading-[1.05] font-extrabold text-bg">
-          <span>Room</span>
-          <span>locked</span>
-        </p>
+      <div className="shrink-0 p-[1cqw]">
+        <div className={size}>
+          <Padlock className="-mx-[1cqw]" />
+        </div>
       </div>
     )
   }
@@ -412,18 +455,29 @@ function useSwapNotice(current: QueueItem): boolean {
   return key !== null && shownFor === key
 }
 
+// The strip beside the video while a song plays (a panel below it on a phone
+// held upright). YouTube's policies don't allow drawing over the player, so
+// the video and the strip never overlap.
+const STRIP = 'w-[max(120px,12cqw)]'
+const BESIDE_STRIP = 'right-[max(120px,12cqw)]'
+
 /** The video, one player for the whole session (see YouTubePlayer). Hidden between songs. */
-function VideoLayer({ song, playing, paused, blocked, session, onBlocked }: {
+function VideoLayer({ song, playing, paused, portrait, session, onBlocked }: {
   song: QueueItem
   playing: boolean
   paused: boolean
-  blocked: boolean
+  portrait: boolean
   session: DisplaySession
   onBlocked: (blocked: boolean) => void
 }) {
+  const area = portrait ? 'inset-x-0 top-0 aspect-video' : `inset-y-0 left-0 ${BESIDE_STRIP}`
   return (
-    <div className={`fixed inset-0 bg-black ${playing ? '' : 'invisible'}`}>
+    <div className={`absolute ${area} bg-black ${playing ? '' : 'invisible'}`}>
+      {/* iPhones only play sound in the player someone tapped, so they keep one for the whole
+          session. Elsewhere each song gets a fresh player: a reused one on Android keeps
+          YouTube's buttons over the next video until someone touches the screen. */}
       <YouTubePlayer
+        key={isAppleTouch() ? 'session' : `${song.id}:${song.youtube_video_id}`}
         itemId={song.id}
         videoId={song.youtube_video_id}
         paused={paused}
@@ -432,72 +486,125 @@ function VideoLayer({ song, playing, paused, blocked, session, onBlocked }: {
         onEnded={(id, reason, error) => void reportEnded(session, id, reason, error).catch(() => {})}
         onBlocked={onBlocked}
       />
-      {/* Taps inside the video iframe never reach this page (and would pause it behind the host's back), so catch them here.
-          Unless the browser is waiting for a tap on the video before it will play. */}
-      <div className={`absolute inset-0 ${blocked ? 'pointer-events-none' : ''}`} />
     </div>
   )
 }
 
-/** Everything drawn over the video. Lets taps through to it. */
-function NowPlaying({ state, blocked }: { state: RoomState; blocked: boolean }) {
+/** The strip beside the video: how to join, who's singing, who's next. */
+function NowPlaying({ state, blocked, portrait, fullscreen }: {
+  state: RoomState
+  blocked: boolean
+  portrait: boolean
+  /** Phones and tablets only. */
+  fullscreen: Fullscreen | null
+}) {
   const current = state.queue.current!
   const next = state.queue.upcoming[0]
   const paused = state.room.playback_status === 'paused'
   const swapNotice = useSwapNotice(current)
 
-  return (
-    <main className="pointer-events-none fixed inset-0 overflow-hidden">
-      {blocked && !paused && (
-        <div className="absolute inset-x-0 top-[35%] flex justify-center px-4">
-          <p className="rounded-full bg-bg/90 px-6 py-3 text-center text-[length:max(14px,2cqw)] font-bold">
-            Tap the video to start the song
-          </p>
+  // A phone held upright: the video keeps the full width and this sits below it.
+  if (portrait) {
+    return (
+      <aside className="absolute inset-x-0 top-[56.25cqw] bottom-0 flex flex-col gap-[5cqw] overflow-y-auto bg-screen p-[5cqw]">
+        <div className="flex items-start gap-[5cqw]">
+          <div className="flex shrink-0 flex-col items-center gap-[2cqw] text-center">
+            <JoinCode state={state} size="w-[max(96px,28cqw)]" />
+            {!state.room.is_locked && (
+              <p className="text-[length:max(12px,3.2cqw)] leading-tight text-muted">
+                Scan to join
+                <br />
+                <span className="text-[length:max(14px,4cqw)] font-bold tracking-[0.08em] text-ink">
+                  {state.room.code}
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-[3cqw]">
+            {(paused || blocked) && (
+              <p className="rounded-xl bg-surface px-3 py-2 text-[length:max(13px,3.6cqw)] font-bold">
+                {paused ? 'Paused by the host' : 'Tap the video to start the song'}
+              </p>
+            )}
+            <div className="flex min-w-0 flex-col gap-[1cqw]">
+              <p className="text-[length:max(12px,3.2cqw)] font-semibold text-accent">ON THE MIC</p>
+              <p className="text-[length:max(18px,5.5cqw)] leading-tight font-bold break-words">
+                {current.added_by.display_name}
+              </p>
+              <p className="truncate text-[length:max(13px,3.6cqw)] text-muted">{shortSongName(current)}</p>
+              {swapNotice && (
+                <p className="text-[length:max(12px,3.2cqw)] text-muted">
+                  The chosen video can’t play here, so this is another version.
+                </p>
+              )}
+            </div>
+            {next && (
+              <div className="flex min-w-0 flex-col gap-[1cqw] border-t border-line pt-[3cqw]">
+                <p className="text-[length:max(12px,3.2cqw)] font-semibold text-accent">UP NEXT</p>
+                <p className="text-[length:max(16px,4.6cqw)] leading-tight font-bold break-words">
+                  {next.added_by.display_name}
+                </p>
+                <p className="truncate text-[length:max(13px,3.6cqw)] text-muted">{shortSongName(next)}</p>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-      <div
-        className={`pointer-events-none absolute top-[2cqw] right-[2cqw] flex flex-col items-center gap-[0.6cqw] ${
-          state.room.is_locked ? 'rounded-[1cqw] bg-bg/70 p-[0.5cqw]' : 'rounded-[1.4cqw] bg-bg/85 p-[0.7cqw]'
-        }`}
-      >
-        {/* Locked, there's nothing to scan, so a small padlock is enough and keeps clear of the lyrics. */}
+        {fullscreen && <FullscreenButton fullscreen={fullscreen} />}
+      </aside>
+    )
+  }
+
+  return (
+    <aside
+      className={`absolute inset-y-0 right-0 ${STRIP} flex flex-col items-center gap-[2cqh] overflow-hidden bg-screen p-[1cqw] text-center`}>
+      <div className="flex flex-col items-center gap-[0.8cqh]">
         <JoinCode
           state={state}
-          size={state.room.is_locked ? 'w-[max(56px,6cqw)] max-w-[max(56px,12cqh)]' : 'w-[max(64px,7cqw)] max-w-[max(64px,14cqh)]'}
+          size="w-[max(84px,8cqw)] max-w-[20cqh]"
         />
         {!state.room.is_locked && (
-          <p className="text-center text-[length:max(10px,0.85cqw)] leading-tight text-muted">
+          <p className="text-[length:max(11px,0.9cqw)] leading-tight text-muted">
             Scan to join
             <br />
-            <span className="text-[length:max(12px,1.2cqw)] font-bold tracking-[0.08em] text-ink">{state.room.code}</span>
+            <span className="text-[length:max(13px,1.2cqw)] font-bold tracking-[0.08em] text-ink">
+              {state.room.code}
+            </span>
           </p>
         )}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 bg-gradient-to-t from-black/80 to-transparent px-[3cqw] pt-[6cqw] pb-[2cqw]">
-        <div className="flex flex-col gap-1">
-          <p className="text-[length:max(13px,1.4cqw)] font-semibold text-accent">ON THE MIC</p>
-          <p className="text-[length:max(20px,2.6cqw)] font-bold">{current.added_by.display_name}</p>
-          <p className="text-[length:max(13px,1.4cqw)] text-muted">{songName(current)}</p>
-          {swapNotice && (
-            <p className="mt-1 w-fit rounded-full bg-bg/85 px-3 py-1 text-[length:max(12px,1.1cqw)] text-muted">
-              The chosen video can’t play here, so this is another version.
-            </p>
-          )}
-        </div>
-        {next && (
-          <div className="flex max-w-[40cqw] flex-col items-end gap-1 text-right">
-            <p className="text-[length:max(13px,1.4cqw)] font-semibold text-accent">UP NEXT</p>
-            <p className="max-w-full truncate text-[length:max(15px,1.8cqw)] font-bold text-ink">{songName(next)}</p>
-            <p className="text-[length:max(13px,1.4cqw)] text-muted">{next.added_by.display_name}</p>
-          </div>
+
+      {(paused || blocked) && (
+        <p className="w-full rounded-xl bg-surface px-2 py-1.5 text-[length:max(12px,1cqw)] font-bold">
+          {paused ? 'Paused by the host' : 'Tap the video to start the song'}
+        </p>
+      )}
+
+      <div className="flex w-full min-w-0 flex-col gap-[0.5cqh]">
+        <p className="text-[length:max(11px,0.9cqw)] font-semibold text-accent">ON THE MIC</p>
+        <p className="truncate text-[length:max(16px,1.6cqw)] leading-tight font-bold">
+          {current.added_by.display_name}
+        </p>
+        <p className="truncate text-[length:max(11px,1cqw)] text-muted">{shortSongName(current)}</p>
+        {swapNotice && (
+          <p className="text-[length:max(11px,0.9cqw)] text-muted">
+            The chosen video can’t play here, so this is another version.
+          </p>
         )}
       </div>
-      {paused && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50">
-          <p className="rounded-full bg-bg/90 px-6 py-3 text-[length:max(14px,2cqw)] font-bold">Paused by the host</p>
+
+      {next && (
+        <div className="flex w-full min-w-0 flex-col gap-[0.5cqh] border-t border-line pt-[2cqh]">
+          <p className="text-[length:max(11px,0.9cqw)] font-semibold text-accent">UP NEXT</p>
+          <p className="truncate text-[length:max(14px,1.3cqw)] leading-tight font-bold text-ink">
+            {next.added_by.display_name}
+          </p>
+          <p className="truncate text-[length:max(11px,1cqw)] text-muted">{shortSongName(next)}</p>
         </div>
       )}
-    </main>
+
+      {fullscreen && <FullscreenButton fullscreen={fullscreen} compact />}
+    </aside>
   )
 }
 
@@ -552,10 +659,14 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
   // iPhone Home Screen mode can't go fullscreen for real, so the toggle turns the stage instead.
   const [sideways, setSideways] = useState(readSideways)
   const canTurn = isStandalone() && !fullscreenSupported()
+  // A phone held upright (and not turned by sideways mode) stacks the info under the video.
+  const portrait = useMediaQuery('(orientation: portrait)') && !(canTurn && sideways)
   const toggleSideways = () => {
     saveSideways(!sideways)
     setSideways(!sideways)
   }
+  const fullscreen = useFullscreen(canTurn ? { on: sideways, toggle: toggleSideways } : undefined)
+  const touch = isTouchScreen()
 
   if (gone || becamePhone || !fresh || !state.data) return <p className="p-6 text-center text-muted">Connecting…</p>
 
@@ -590,19 +701,18 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
           song={song}
           playing={current !== null}
           paused={state.data.room.playback_status === 'paused'}
-          blocked={blocked}
+          portrait={portrait}
           session={session}
           onBlocked={setBlocked}
         />
       )}
       {current ? (
-        <NowPlaying state={state.data} blocked={blocked} />
+        <NowPlaying state={state.data} blocked={blocked} portrait={portrait} fullscreen={touch ? fullscreen : null} />
       ) : (
         <Invitation state={state.data} onDisconnect={disconnect} />
       )}
-      {isTouchScreen() && (
-        <FullscreenToggle sideways={canTurn ? { on: sideways, toggle: toggleSideways } : undefined} />
-      )}
+      {/* While a song plays the button lives in the info area: nothing may sit on the video. */}
+      {touch && !current && <FullscreenToggle fullscreen={fullscreen} />}
     </Stage>
   )
 }

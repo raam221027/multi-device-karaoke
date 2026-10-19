@@ -1,5 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react'
+import { Link } from 'react-router-dom'
 import * as icons from '../../assets/icons'
+import Padlock from '../../components/Padlock'
 import { useRoom } from '../../lib/roomContext'
 import { Button, ButtonLink, Icon, Lead, PageHeading, Screen, StatusPill } from '../../components/ui'
 import { isLocalhost, joinUrl, publicHost, useShare } from '../../lib/share'
@@ -18,13 +20,29 @@ export default function InvitePage() {
 
       <section className="flex flex-col items-center gap-[14px] rounded-[20px] bg-surface p-5 text-center">
         <StatusPill>{room.name ?? 'Your room'}</StatusPill>
-        <div className="rounded-xl bg-white p-3">
-          <QRCodeSVG value={url} size={164} marginSize={0} title={`Join link for room ${room.code}`} />
-        </div>
-        <p className="font-bold tracking-[0.08em] text-[38px]">{room.code}</p>
-        <p className="text-[14px] leading-[1.45] text-muted">
-          Scan to join, or enter {room.code} at {publicHost()}
-        </p>
+        {room.is_locked ? (
+          // The QR's 164px plus its white border.
+          <Padlock className="mb-3 w-[188px]" />
+        ) : (
+          <div className="rounded-xl bg-white p-3">
+            <QRCodeSVG value={url} size={164} marginSize={0} title={`Join link for room ${room.code}`} />
+          </div>
+        )}
+        {/* Locked, the code can't get anyone in, so it's hidden along with the QR. */}
+        {!room.is_locked && <p className="font-bold tracking-[0.08em] text-[38px]">{room.code}</p>}
+        {room.is_locked ? (
+          <p className="text-[14px] leading-[1.45] text-muted">
+            Room locked. New people can’t join until you unlock it in{' '}
+            <Link to={`${base}/settings`} className="text-accent">
+              Room settings
+            </Link>
+            .
+          </p>
+        ) : (
+          <p className="text-[14px] leading-[1.45] text-muted">
+            Scan to join, or enter {room.code} at {publicHost()}
+          </p>
+        )}
         {isLocalhost && (
           <p className="text-[12px] leading-[1.45] text-danger">
             This QR points to localhost, which phones can’t reach. Open the app with your PC’s LAN IP instead.

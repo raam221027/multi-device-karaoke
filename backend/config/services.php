@@ -37,6 +37,8 @@ return [
 
     'youtube' => [
         'key' => env('YOUTUBE_API_KEY'),
+        // Units per day Google grants this project; search pauses just short of it.
+        'daily_quota' => (int) env('YOUTUBE_DAILY_QUOTA', 10000),
         // Searches behind the "Popular karaoke" suggestions, refreshed weekly.
         'popular_searches' => [
             'OPM karaoke hits',

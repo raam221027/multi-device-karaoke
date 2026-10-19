@@ -14,13 +14,24 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Server-side proxy for the YouTube Data API. search.list costs 100 quota
- * units, so results are cached by normalized query.
+ * units, so results are cached by normalized query, and the day's spending
+ * is counted so search pauses before the quota runs out instead of failing
+ * for everyone.
  */
 class YouTube
 {
     private const BASE = 'https://www.googleapis.com/youtube/v3';
 
-    private const CACHE_HOURS = 24;
+    /** API data may be kept up to 30 days; a week keeps it fresh and well under that. */
+    private const CACHE_DAYS = 7;
+
+    /** Quota units per call (https://developers.google.com/youtube/v3/determine_quota_cost). */
+    private const COST = ['/search' => 100, '/videos' => 1];
+
+    /** New searches stop at this share of the daily quota, leaving room for adding songs. */
+    private const SEARCH_BUDGET = 0.95;
+
+    public const RESTING_MESSAGE = 'Song search is resting until tomorrow. Clear the search box to pick from Popular karaoke.';
 
     /** Karaoke channels without "karaoke" in their name (lowercase). */
     private const KARAOKE_CHANNELS = ['sing king', 'karafun', 'singsongs', 'zoom karaoke official', 'sing2piano'];
@@ -41,25 +52,92 @@ class YouTube
      */
     public function searchPage(string $query, bool $karaoke = true, ?string $pageToken = null): array
     {
-        $normalized = Str::of($query)->lower()->squish()->value();
-        $q = $karaoke && ! str_contains($normalized, 'karaoke') ? "{$normalized} karaoke" : $normalized;
-        $key = 'youtube:search:v3:'.sha1($q.'|'.($pageToken ?? ''));
+        $q = self::normalizeQuery($query, $karaoke);
+        $key = 'youtube:search:v4:'.sha1($q.'|'.($pageToken ?? ''));
 
-        $page = Cache::remember($key, now()->addHours(self::CACHE_HOURS), function () use ($q, $pageToken) {
+        $page = Cache::get($key);
+        if ($page !== null) {
+            $this->count('hits');
+        } else {
+            abort_unless($this->canSearch(), 503, self::RESTING_MESSAGE);
+            $this->count('searches');
+
             $json = $this->request('/search', array_filter([
                 'part' => 'snippet',
                 'type' => 'video',
                 'videoEmbeddable' => 'true',
-                'maxResults' => 12,
+                // Same 100 units for 20 results as for 12, so fewer "More" taps.
+                'maxResults' => 20,
                 'q' => $q,
                 'pageToken' => $pageToken,
             ]));
             $ids = collect($json['items'] ?? [])->pluck('id.videoId')->filter()->values()->all();
 
-            return ['videos' => $this->videos($ids), 'next' => $json['nextPageToken'] ?? null];
-        });
+            $page = ['videos' => $this->videos($ids), 'next' => $json['nextPageToken'] ?? null];
+            Cache::put($key, $page, now()->addDays(self::CACHE_DAYS));
+        }
 
         return ['videos' => $this->playable($page['videos']), 'next' => $page['next']];
+    }
+
+    /**
+     * One cache entry per song however it's typed: "Alapaap!", " alapaap"
+     * and "Karaoke Alapaap" all search for "alapaap karaoke".
+     */
+    public static function normalizeQuery(string $query, bool $karaoke = true): string
+    {
+        $words = Str::of($query)->lower()->replaceMatches('/[^\p{L}\p{N}\']+/u', ' ')->squish();
+
+        if (! $karaoke) {
+            return $words->value();
+        }
+
+        return $words->replaceMatches('/\bkaraoke\b/u', '')->squish()->append(' karaoke')->trim()->value();
+    }
+
+    /** Whether a new (uncached) search fits in today's quota. */
+    public function canSearch(): bool
+    {
+        if (Cache::has($this->dayKey('resting'))) {
+            return false;
+        }
+
+        $budget = (int) config('services.youtube.daily_quota', 10000) * self::SEARCH_BUDGET;
+
+        return $this->usage()['units'] + self::COST['/search'] + self::COST['/videos'] <= $budget;
+    }
+
+    /**
+     * Today's spending, in YouTube's quota day (midnight Pacific).
+     *
+     * @return array{day: string, units: int, searches: int, hits: int, resting: bool}
+     */
+    public function usage(): array
+    {
+        return [
+            'day' => $this->quotaDay(),
+            'units' => (int) Cache::get($this->dayKey('units'), 0),
+            'searches' => (int) Cache::get($this->dayKey('searches'), 0),
+            'hits' => (int) Cache::get($this->dayKey('hits'), 0),
+            'resting' => Cache::has($this->dayKey('resting')),
+        ];
+    }
+
+    private function count(string $what, int $by = 1): void
+    {
+        $key = $this->dayKey($what);
+        Cache::add($key, 0, now()->addDays(2));
+        Cache::increment($key, $by);
+    }
+
+    private function quotaDay(): string
+    {
+        return now('America/Los_Angeles')->toDateString();
+    }
+
+    private function dayKey(string $what): string
+    {
+        return "youtube:{$what}:".$this->quotaDay();
     }
 
     /**
@@ -107,7 +185,7 @@ class YouTube
             return null;
         }
 
-        return Cache::remember('youtube:video:'.$id, now()->addHours(self::CACHE_HOURS), fn () => $this->videos([$id])[0] ?? null);
+        return Cache::remember('youtube:video:'.$id, now()->addDays(self::CACHE_DAYS), fn () => $this->videos([$id])[0] ?? null);
     }
 
     /**
@@ -213,9 +291,22 @@ class YouTube
 
     private function request(string $path, array $query): array
     {
+        $client = $this->client();
+        // YouTube charges the call whether or not it succeeds.
+        $this->count('units', self::COST[$path] ?? 1);
+
         try {
-            return $this->client()->get($path, $query)->throw()->json() ?? [];
-        } catch (ConnectionException|RequestException $e) {
+            return $client->get($path, $query)->throw()->json() ?? [];
+        } catch (RequestException $e) {
+            $reason = $e->response->json('error.errors.0.reason');
+            if (in_array($reason, ['quotaExceeded', 'dailyLimitExceeded'], true)) {
+                // Rest until YouTube's quota day turns over instead of failing every search.
+                Cache::put($this->dayKey('resting'), true, now('America/Los_Angeles')->endOfDay());
+                abort(503, self::RESTING_MESSAGE);
+            }
+            report($e);
+            abort(502, 'YouTube search is unavailable right now. Try again in a moment.');
+        } catch (ConnectionException $e) {
             report($e);
             abort(502, 'YouTube search is unavailable right now. Try again in a moment.');
         }

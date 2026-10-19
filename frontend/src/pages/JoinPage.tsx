@@ -115,6 +115,18 @@ export default function JoinPage() {
         </form>
       </Card>
 
+      <p className="text-center text-[13px] leading-[1.45] text-muted">
+        By joining you agree to the{' '}
+        <Link to="/terms" className="text-accent">
+          Terms
+        </Link>{' '}
+        and{' '}
+        <Link to="/privacy" className="text-accent">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
       {wasScreen && (
         <div className="flex flex-col gap-2">
           <Button variant="secondary" onClick={() => screen.mutate()} disabled={screen.isPending || join.isPending}>

@@ -1,5 +1,8 @@
 import { useState } from 'react'
 
+/** Where people reach the person who runs Videokehan (footer, privacy policy). */
+export const CONTACT_EMAIL = 'raam221027@gmail.com'
+
 const onLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
 
 /**

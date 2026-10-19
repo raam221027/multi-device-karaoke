@@ -8,6 +8,7 @@ import './index.css'
 import DisplayPage from './pages/DisplayPage.tsx'
 import HomePage from './pages/HomePage.tsx'
 import JoinPage from './pages/JoinPage.tsx'
+import { PrivacyPage, TermsPage } from './pages/LegalPages.tsx'
 import ScanPage from './pages/ScanPage.tsx'
 import ClosePage from './pages/host/ClosePage.tsx'
 import GuestsPage from './pages/host/GuestsPage.tsx'
@@ -62,6 +63,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="room" element={<GuestRoomPage />} />
           </Route>
           <Route path="/display" element={<DisplayPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Analytics />

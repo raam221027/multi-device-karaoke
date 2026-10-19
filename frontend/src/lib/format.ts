@@ -123,6 +123,21 @@ export function songName(item: Pick<QueueItem, 'title' | 'song_title'>): string 
   return item.song_title ?? parseSongTitle(item.title).song
 }
 
+/** Karaoke tags wherever they sit in a title: "Ikaw KARAOKE HD", "Love Story - Lyrics". */
+export function stripSongTags(text: string): string {
+  return text
+    .replace(/\b(karaoke( version)?|videoke|instrumental|(with )?lyrics|minus one|sing ?along|official (music )?video|karafun|hd|4k)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s\-–—]+|[\s\-–—]+$/g, '')
+}
+
+/** Just the song, for tight spots like the display's side strip: no artist, no tags. */
+export function shortSongName(item: Pick<QueueItem, 'title' | 'song_title'>): string {
+  if (item.song_title) return item.song_title
+  const song = stripSongTags(parseSongTitle(item.title).song)
+  return song || item.title
+}
+
 export function songArtist(item: Pick<QueueItem, 'title' | 'artist' | 'song_title'>): string | null {
   return item.song_title ? item.artist : parseSongTitle(item.title).artist
 }

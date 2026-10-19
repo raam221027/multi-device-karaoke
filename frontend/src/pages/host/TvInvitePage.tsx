@@ -2,6 +2,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import * as icons from '../../assets/icons'
+import Padlock from '../../components/Padlock'
 import { useRoom, useRoomMutation } from '../../lib/roomContext'
 import { Avatar, Button, ButtonLink, ErrorText, Icon, Lead, PageHeading, Screen, StatusPill } from '../../components/ui'
 import { errorMessage, makeDisplay } from '../../lib/rooms'
@@ -144,9 +145,14 @@ export default function TvInvitePage() {
               {publicHost()} · {room.code}
             </p>
           </div>
-          <div className="shrink-0 rounded-md bg-white p-2">
-            <QRCodeSVG value={joinUrl(room.code)} size={102} marginSize={0} />
-          </div>
+          {room.is_locked ? (
+            // The QR's 102px plus its white border.
+            <Padlock className="w-[118px]" />
+          ) : (
+            <div className="shrink-0 rounded-md bg-white p-2">
+              <QRCodeSVG value={joinUrl(room.code)} size={102} marginSize={0} />
+            </div>
+          )}
         </div>
         <p className="text-center text-[12px] leading-[1.45] text-muted">What the screen shows between songs</p>
       </section>

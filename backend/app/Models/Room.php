@@ -145,4 +145,33 @@ class Room extends Model
             ->whereIn('tokenable_id', $this->participants()->select('id'))
             ->delete();
     }
+
+    /** How long a finished or abandoned room, and the YouTube details of its songs, are kept. */
+    public const KEEP_DAYS = 30;
+
+    /**
+     * Delete rooms closed, or left untouched, more than KEEP_DAYS ago, with
+     * their guests, songs and sign-in tokens. YouTube's policies allow API data
+     * (titles, channels, thumbnails) to be kept at most 30 days.
+     */
+    public static function pruneOld(): int
+    {
+        $cutoff = now()->subDays(self::KEEP_DAYS);
+        $pruned = 0;
+
+        static::query()
+            ->where(fn ($q) => $q->where('closed_at', '<', $cutoff)
+                ->orWhere(fn ($q) => $q->whereNull('closed_at')->where('updated_at', '<', $cutoff)))
+            ->chunkById(100, function ($rooms) use (&$pruned) {
+                foreach ($rooms as $room) {
+                    $room->revokeTokens();
+                    // Its songs point back at the room, so let go of the current one first.
+                    $room->forceFill(['current_queue_item_id' => null])->saveQuietly();
+                    $room->delete();
+                    $pruned++;
+                }
+            });
+
+        return $pruned;
+    }
 }

@@ -21,9 +21,10 @@ class PlaybackController extends Controller
 
     public function skip(Request $request, Room $room): Response
     {
-        Gate::authorize('skip', $room);
+        $itemId = $this->itemId($request);
+        Gate::authorize('skip', [$room, $room->queueItems()->find($itemId)]);
 
-        $this->queue->advance($room, $this->itemId($request), QueueItemStatus::Skipped);
+        $this->queue->advance($room, $itemId, QueueItemStatus::Skipped);
 
         return response()->noContent();
     }

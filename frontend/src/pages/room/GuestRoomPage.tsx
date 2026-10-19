@@ -45,7 +45,7 @@ export default function GuestRoomPage() {
 
       <Note icon={icons.shieldCheck}>
         {canAdd ? 'You can add songs.' : 'The host has paused song adding for you.'}{' '}
-        {room.guests_can_skip ? 'Guests can skip the current song.' : 'Only the host skips songs.'}
+        {room.guests_can_skip ? 'Guests can skip the current song.' : 'You can skip your own song.'}
       </Note>
 
       <p className="text-[12px] leading-[1.45] text-muted">

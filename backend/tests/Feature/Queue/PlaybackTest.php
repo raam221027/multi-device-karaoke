@@ -66,6 +66,22 @@ it('only lets guests skip when the host allows it', function () {
         ->assertNoContent();
 });
 
+it('lets a guest skip their own song even when guests can not skip', function () {
+    asDevice($this->hostToken)
+        ->postJson("/api/rooms/{$this->room->id}/playback/skip", ['queue_item_id' => $this->first])
+        ->assertNoContent();
+    [, $otherToken] = deviceIn($this->room, 'guest');
+
+    asDevice($otherToken)
+        ->postJson("/api/rooms/{$this->room->id}/playback/skip", ['queue_item_id' => $this->second])
+        ->assertForbidden();
+    asDevice($this->guestToken)
+        ->postJson("/api/rooms/{$this->room->id}/playback/skip", ['queue_item_id' => $this->second])
+        ->assertNoContent();
+
+    expect(QueueItem::find($this->second)->status->value)->toBe('skipped');
+});
+
 it('only lets the display report playback', function () {
     asDevice($this->hostToken)
         ->postJson("/api/rooms/{$this->room->id}/playback/ended", ['queue_item_id' => $this->first, 'reason' => 'ended'])

@@ -93,7 +93,7 @@ class RoomController extends Controller
     {
         $room = $this->findOpenRoom($request->input('code'));
 
-        abort_if($room->is_locked, 423, 'This room is locked. Ask the host to allow guests to join.');
+        abort_if($room->is_locked, 423, 'This room is locked. Ask the host to unlock it.');
 
         $display = DB::transaction(function () use ($room, $request) {
             $display = $this->replaceDisplay($room, $request->input('device'));

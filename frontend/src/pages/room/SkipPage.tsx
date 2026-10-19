@@ -18,7 +18,7 @@ export default function SkipPage() {
     onSuccess: () => navigate(base, { replace: true }),
   })
 
-  if (!current || (!isHost && !state.room.guests_can_skip)) return <Navigate to={base} replace />
+  if (!current || (!isHost && !state.room.guests_can_skip && current.added_by.id !== state.me.id)) return <Navigate to={base} replace />
 
   const mine = current.added_by.id === state.me.id
   const singer = mine ? 'you' : (current.added_by.display_name ?? 'the singer')

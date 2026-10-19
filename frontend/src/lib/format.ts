@@ -140,3 +140,10 @@ export function singerStatus(state: RoomState, participantId: number): string | 
 export function displayLabel(p: Pick<Participant, 'device' | 'display_name'>): string {
   return `${p.device ?? p.display_name ?? 'Screen'} - Display`
 }
+
+/** What the room's screen is, for sentences like "the QR code on the TV". */
+export function screenKind(state: RoomState): string {
+  const screen = state.participants.find((p) => p.role === 'display')
+  if (!screen) return 'screen'
+  return screen.device ?? 'Mobile' // a guest's phone that became the screen
+}

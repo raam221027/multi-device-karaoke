@@ -14,7 +14,7 @@ export default function LivePage() {
 
   const paused = room.playback_status === 'paused'
   const togglePause = useRoomMutation(() => setPaused(roomId, !paused))
-  const canSkip = queue.current && (isHost || room.guests_can_skip)
+  const canSkip = queue.current && (isHost || room.guests_can_skip || queue.current.added_by.id === me.id)
   const next = queue.upcoming[0]
 
   return (

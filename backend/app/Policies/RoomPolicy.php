@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\ParticipantRole;
 use App\Models\Participant;
+use App\Models\QueueItem;
 use App\Models\Room;
 
 /** The authenticated "user" is always a Participant holding a room token. */
@@ -55,10 +56,16 @@ class RoomPolicy
             && $participant->can_add_songs;
     }
 
-    public function skip(Participant $participant, Room $room): bool
+    /** The host always; guests when the host allows it; and anyone can skip their own song. */
+    public function skip(Participant $participant, Room $room, ?QueueItem $item = null): bool
     {
-        return $this->manage($participant, $room)
-            || ($this->view($participant, $room) && $participant->isGuest() && $room->guests_can_skip);
+        if ($this->manage($participant, $room)) {
+            return true;
+        }
+
+        return $this->view($participant, $room)
+            && ! $participant->isDisplay()
+            && ($room->guests_can_skip || $item?->added_by_participant_id === $participant->id);
     }
 
     /** Only the display reports what the player actually did. */

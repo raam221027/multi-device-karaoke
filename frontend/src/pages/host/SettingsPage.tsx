@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import * as icons from '../../assets/icons'
 import { useRoom, useRoomMutation } from '../../lib/roomContext'
 import { ButtonLink, ErrorText, Icon, PageHeading, Screen, SectionHeading, Toggle } from '../../components/ui'
-import { phones, plural } from '../../lib/format'
+import { phones, plural, screenKind } from '../../lib/format'
 import { errorMessage, updateRoom } from '../../lib/rooms'
 import type { RoomSettings } from '../../lib/types'
 
@@ -102,14 +102,14 @@ export default function SettingsPage() {
       <section className="flex flex-col">
         <SectionHeading title="Guest permissions" aside={save.isPending ? 'Saving…' : 'Saved automatically'} />
         <Permission
-          title="Allow guests to join"
+          title="Lock room & hide QR code"
           detail={
             value.is_locked
-              ? 'Locked. New people can’t join, even with the QR or code.'
-              : 'Anyone with the QR or room code can join.'
+              ? 'Locked. The QR code is hidden and nobody new can join.'
+              : `New people can join by scanning the QR code on the ${screenKind(state)}.`
           }
-          checked={!value.is_locked}
-          onChange={(allow) => change({ is_locked: !allow })}
+          checked={value.is_locked}
+          onChange={(locked) => change({ is_locked: locked })}
         />
         <Permission
           title="Allow song additions"
@@ -126,7 +126,7 @@ export default function SettingsPage() {
           detail={
             value.guests_can_skip
               ? 'On. Guests can skip the current song.'
-              : 'Off for this room. Only you control skipping.'
+              : 'Off. Only you and the singer can skip their song.'
           }
           checked={value.guests_can_skip}
           onChange={(allow) => change({ guests_can_skip: allow })}

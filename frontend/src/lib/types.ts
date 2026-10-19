@@ -23,7 +23,7 @@ export type Participant = {
   /** Set only for a screen that joined by code (Mobile, Tablet, PC, TV). */
   device: string | null
   role: Role
-  status: 'pending' | 'approved' | 'rejected' | 'kicked'
+  status: 'pending' | 'approved' | 'rejected' | 'kicked' | 'left'
   can_add_songs: boolean
   joined_at: string
 }

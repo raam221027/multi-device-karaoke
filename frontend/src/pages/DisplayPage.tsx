@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
+import padlock from '../assets/padlock.png'
 import YouTubePlayer from '../components/YouTubePlayer'
 import { Button, ButtonLink, ErrorText, Icon, TextInput } from '../components/ui'
 import { ApiError, getToken } from '../lib/api'
@@ -344,10 +345,18 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
 function JoinCode({ state, size }: { state: RoomState; size: string }) {
   const { room } = state
   if (room.is_locked) {
+    // The PNG is a black padlock, so it's used as a mask and painted in the ink color to show on the dark screen.
+    // The words sit inside the lock's body, sized against the padlock's own width.
     return (
-      <div className={`flex shrink-0 flex-col items-center justify-center gap-[0.5cqw] rounded-[1.5cqw] bg-surface p-[1.5cqw] text-center ${size}`}>
-        <p className="text-[length:max(13px,1.6cqw)] font-bold">Room locked</p>
-        <p className="text-[length:max(11px,1cqw)] text-muted">The host isn’t letting new people in.</p>
+      <div role="img" aria-label="Room locked. The host isn’t letting new people in." className={`@container relative aspect-square shrink-0 ${size}`}>
+        <div
+          className="absolute inset-0 bg-ink"
+          style={{ mask: `url(${padlock}) center / contain no-repeat`, WebkitMask: `url(${padlock}) center / contain no-repeat` }}
+        />
+        <p className="absolute inset-x-[9%] top-[45%] bottom-[10%] flex flex-col items-center justify-center text-center text-[16cqw] leading-[1.05] font-extrabold text-bg">
+          <span>Room</span>
+          <span>locked</span>
+        </p>
       </div>
     )
   }
@@ -446,13 +455,21 @@ function NowPlaying({ state, blocked }: { state: RoomState; blocked: boolean }) 
           </p>
         </div>
       )}
-      <div className="pointer-events-none absolute top-[2cqw] right-[2cqw] flex flex-col items-center gap-[0.6cqw] rounded-[1.8cqw] bg-bg/85 p-[1cqw]">
-        <JoinCode state={state} size="w-[max(96px,11cqw)] max-w-[max(96px,22cqh)]" />
+      <div
+        className={`pointer-events-none absolute top-[2cqw] right-[2cqw] flex flex-col items-center gap-[0.6cqw] ${
+          state.room.is_locked ? 'rounded-[1cqw] bg-bg/70 p-[0.5cqw]' : 'rounded-[1.4cqw] bg-bg/85 p-[0.7cqw]'
+        }`}
+      >
+        {/* Locked, there's nothing to scan, so a small padlock is enough and keeps clear of the lyrics. */}
+        <JoinCode
+          state={state}
+          size={state.room.is_locked ? 'w-[max(56px,6cqw)] max-w-[max(56px,12cqh)]' : 'w-[max(64px,7cqw)] max-w-[max(64px,14cqh)]'}
+        />
         {!state.room.is_locked && (
-          <p className="text-center text-[length:max(11px,1cqw)] leading-tight text-muted">
+          <p className="text-center text-[length:max(10px,0.85cqw)] leading-tight text-muted">
             Scan to join
             <br />
-            <span className="text-[length:max(13px,1.4cqw)] font-bold tracking-[0.08em] text-ink">{state.room.code}</span>
+            <span className="text-[length:max(12px,1.2cqw)] font-bold tracking-[0.08em] text-ink">{state.room.code}</span>
           </p>
         )}
       </div>

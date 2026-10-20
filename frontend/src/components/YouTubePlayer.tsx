@@ -6,6 +6,8 @@ type YTPlayer = {
   playVideo(): void
   pauseVideo(): void
   destroy(): void
+  /** Undocumented, but the only way to beat captions the uploader or viewer forces on. */
+  unloadModule?(name: string): void
 }
 
 type YTNamespace = {
@@ -39,6 +41,21 @@ const BUFFERING = 3
 
 // How long a play request may go unanswered before we assume the browser blocked it.
 const BLOCKED_MS = 2500
+
+/**
+ * Karaoke videos have the lyrics burned in, so captions only cover them.
+ * `cc_load_policy: 0` alone doesn't override the uploader's or viewer's
+ * setting, and the module comes back with each video.
+ */
+function hideCaptions(p: YTPlayer) {
+  for (const name of ['captions', 'cc']) {
+    try {
+      p.unloadModule?.(name)
+    } catch {
+      // YouTube changed something; captions just stay as they are.
+    }
+  }
+}
 
 let loading: Promise<YTNamespace> | null = null
 
@@ -130,7 +147,7 @@ export default function YouTubePlayer({
         videoId: latest.current.videoId,
         width: '100%',
         height: '100%',
-        playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
+        playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, cc_load_policy: 0 },
         events: {
           onReady: (e) => {
             if (cancelled) return
@@ -146,6 +163,7 @@ export default function YouTubePlayer({
           onStateChange: (e) => {
             playerState.current = e.data
             if (e.data === PLAYING) {
+              hideCaptions(e.target)
               clearTimeout(blockedTimer.current)
               latest.current.onBlocked?.(false)
             }

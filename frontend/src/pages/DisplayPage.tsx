@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
 import Padlock from '../components/Padlock'
 import YouTubePlayer from '../components/YouTubePlayer'
@@ -283,8 +283,11 @@ function useWakeLock(active: boolean) {
 function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; onConnected: (s: DisplaySession) => void }) {
   // This device was the screen until recently (maybe before a reload).
   const ended = displayEnded()
+  // Picked "Use this device as the screen" on the home page: no need to ask again.
+  const asScreen = (useLocation().state as { asScreen?: boolean } | null)?.asScreen === true
   const notice =
-    endNotice ?? (ended ? 'This screen was disconnected. Enter the room code to join again.' : undefined)
+    endNotice ??
+    (ended && !asScreen ? 'This screen was disconnected. Enter the room code to join again.' : undefined)
   // The host's display QR opens /display?code=…, so a phone only has to tap Connect.
   const [params] = useSearchParams()
   const prefilled = normalizeCode(params.get('code') ?? '')
@@ -292,7 +295,8 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
   const connect = useMutation({ mutationFn: () => connectDisplay(normalizeCode(code)), onSuccess: onConnected })
   const navigate = useNavigate()
   // A screen that was replaced may only want back in as a singer, so ask
-  // before taking the screen back. Fresh setups connect directly.
+  // before taking the screen back. Fresh setups, and anyone who chose
+  // "Use this device as the screen", connect directly.
   const [choosing, setChoosing] = useState(false)
 
   // A phone that's hosting can't also be the screen, or the room would lose
@@ -304,7 +308,7 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (ended) return setChoosing(true)
+    if (ended && !asScreen) return setChoosing(true)
     fillTouchScreen()
     connect.mutate()
   }
@@ -462,15 +466,17 @@ const STRIP = 'w-[max(120px,12cqw)]'
 const BESIDE_STRIP = 'right-[max(120px,12cqw)]'
 
 /** The video, one player for the whole session (see YouTubePlayer). Hidden between songs. */
-function VideoLayer({ song, playing, paused, portrait, session, onBlocked }: {
+function VideoLayer({ song, playing, paused, portrait, full, session, onBlocked }: {
   song: QueueItem
   playing: boolean
   paused: boolean
   portrait: boolean
+  /** The host hid the strip: the video takes the whole screen. */
+  full: boolean
   session: DisplaySession
   onBlocked: (blocked: boolean) => void
 }) {
-  const area = portrait ? 'inset-x-0 top-0 aspect-video' : `inset-y-0 left-0 ${BESIDE_STRIP}`
+  const area = full ? 'inset-0' : portrait ? 'inset-x-0 top-0 aspect-video' : `inset-y-0 left-0 ${BESIDE_STRIP}`
   return (
     <div className={`absolute ${area} bg-black ${playing ? '' : 'invisible'}`}>
       {/* iPhones only play sound in the player someone tapped, so they keep one for the whole
@@ -694,6 +700,10 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
     onEnd('Disconnected. Enter a room code to connect again.')
   }
 
+  // With the strip hidden, nothing shows during a song: not even the full
+  // screen button, which may not sit on the video. It's back between songs.
+  const strip = state.data.room.show_side_strip
+
   return (
     <Stage sideways={canTurn && sideways}>
       {song && (
@@ -702,12 +712,15 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
           playing={current !== null}
           paused={state.data.room.playback_status === 'paused'}
           portrait={portrait}
+          full={!strip}
           session={session}
           onBlocked={setBlocked}
         />
       )}
       {current ? (
-        <NowPlaying state={state.data} blocked={blocked} portrait={portrait} fullscreen={touch ? fullscreen : null} />
+        strip && (
+          <NowPlaying state={state.data} blocked={blocked} portrait={portrait} fullscreen={touch ? fullscreen : null} />
+        )
       ) : (
         <Invitation state={state.data} onDisconnect={disconnect} />
       )}

@@ -13,6 +13,7 @@ class UpdateRoomRequest extends FormRequest
             'is_locked' => ['sometimes', 'boolean'],
             'allow_song_additions' => ['sometimes', 'boolean'],
             'guests_can_skip' => ['sometimes', 'boolean'],
+            'show_side_strip' => ['sometimes', 'boolean'],
         ];
     }
 }

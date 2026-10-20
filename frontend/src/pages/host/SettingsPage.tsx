@@ -140,6 +140,12 @@ export default function SettingsPage() {
           Videos play on one screen: a TV, laptop, tablet or spare phone. Keep that browser tab open and the screen
           awake; it may need one tap to start the sound. Connecting another screen moves playback there.
         </p>
+        <Permission
+          title="Side panel"
+          detail={value.show_side_strip ? 'On. The side panel is visible.' : 'Off. The side panel is hidden.'}
+          checked={value.show_side_strip}
+          onChange={(show) => change({ show_side_strip: show })}
+        />
         <ButtonLink to={`${base}/invite/tv`} variant="secondary" icon={icons.monitorSettings}>
           {state.display_connected
             ? 'Switch display'

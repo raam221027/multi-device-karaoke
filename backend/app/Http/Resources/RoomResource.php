@@ -21,6 +21,7 @@ class RoomResource extends JsonResource
             'requires_approval' => $this->requires_approval,
             'allow_song_additions' => $this->allow_song_additions,
             'guests_can_skip' => $this->guests_can_skip,
+            'show_side_strip' => $this->show_side_strip,
             'playback_status' => $this->playback_status,
             'paused_at' => $this->paused_at,
             'paused_seconds' => $this->paused_seconds,

@@ -33,12 +33,14 @@ it('lets the host change room settings', function () {
             'is_locked' => true,
             'allow_song_additions' => false,
             'guests_can_skip' => true,
+            'show_side_strip' => false,
         ])
         ->assertOk()
         ->assertJsonPath('data.name', 'Rooftop')
         ->assertJsonPath('data.is_locked', true)
         ->assertJsonPath('data.allow_song_additions', false)
-        ->assertJsonPath('data.guests_can_skip', true);
+        ->assertJsonPath('data.guests_can_skip', true)
+        ->assertJsonPath('data.show_side_strip', false);
 });
 
 it('does not let guests change settings', function () {

@@ -182,7 +182,7 @@ export default function HomePage() {
         </ButtonLink>
 
         {/* No TV? A spare phone, tablet or laptop can play the videos instead. */}
-        <Link to="/display" className="flex items-center justify-center gap-2 py-2 text-[14px] text-accent">
+        <Link to="/display" state={{ asScreen: true }} className="flex items-center justify-center gap-2 py-2 text-[14px] text-accent">
           <Icon src={icons.monitor} size={16} />
           Use this device as the screen
         </Link>

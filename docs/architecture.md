@@ -56,7 +56,7 @@ The host sings like any guest: Live, Queue and Search are the same screens for e
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/rooms/display` | 20/min per IP (shared with join) | `{code, device?}` connects any browser as the room's `display`, named after its device (`Mobile`, `Tablet`, `PC`, `TV`; else `Screen`) and shown as "PC - Display". A phone that becomes the display shows as "Ana - Display". A new display replaces the old one, which is how the host switches screens: a screen that joined by code is revoked, while a phone that was the screen goes back to being a guest with the same token. 423 if locked |
-| PATCH | `/api/rooms/{room}` | `host` | `{name, is_locked, allow_song_additions, guests_can_skip}` |
+| PATCH | `/api/rooms/{room}` | `host` | `{name, is_locked, allow_song_additions, guests_can_skip, show_side_strip}` |
 | PATCH | `/api/rooms/{room}/participants/{p}` | `host` | `{can_add_songs}` |
 | DELETE | `/api/rooms/{room}/participants/{p}` | `host` | Remove a guest or the display: revokes its token and drops its *waiting* songs (a song already playing finishes) |
 | POST | `/api/rooms/{room}/participants/{p}/make-host` | `host` | Hand the room to a guest. The old host becomes a guest and keeps their songs. Both tokens keep working; only their ability changes. 422 for the display or the host |
@@ -89,7 +89,7 @@ The host can make any guest the host (Guests → Make host). Roles live on the p
 
 ```
 rooms             id, code, name, status[open|closed], is_locked, requires_approval,
-                  allow_song_additions, guests_can_skip, current_queue_item_id,
+                  allow_song_additions, guests_can_skip, show_side_strip, current_queue_item_id,
                   playback_status[playing|paused], paused_at, paused_seconds,
                   version, closed_at, timestamps
 participants      id, room_id, role, display_name, status[pending|approved|rejected|kicked],

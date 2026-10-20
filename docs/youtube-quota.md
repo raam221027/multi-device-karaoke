@@ -5,9 +5,9 @@ Draft answers for the [YouTube API Services quota extension form](https://suppor
 ## The app
 
 - **Name:** Videokehan
-- **URL:** [LINK]
-- **Privacy policy:** [LINK]/privacy
-- **Terms of use:** [LINK]/terms
+- **URL:** https://videokehan.com
+- **Privacy policy:** https://videokehan.com/privacy
+- **Terms of use:** https://videokehan.com/terms
 - **Contact:** raam221027@gmail.com
 - **What it does:** a free, browser-based karaoke app for house parties. One device (TV, laptop, tablet or spare phone) plays karaoke videos in the YouTube IFrame player; guests join from their phones by scanning a QR code, search for songs and add them to a shared queue. No accounts, no ads, no downloads.
 - **Who uses it:** friends and families at home karaoke parties, mostly in the Philippines.

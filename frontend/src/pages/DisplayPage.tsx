@@ -626,6 +626,8 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
     queryKey: ['display', session.roomId, session.token],
     queryFn: () => getDisplayState(session),
     refetchInterval: POLL_MS,
+    // A PC screen often sits behind other tabs; the next song must still start.
+    refetchIntervalInBackground: true,
     retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 3,
     // A device keeps its token through role changes, so an answer cached from
     // an earlier stint as the screen ("you're a guest now") must never be reused.

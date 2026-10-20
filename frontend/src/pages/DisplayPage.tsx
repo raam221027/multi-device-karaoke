@@ -476,20 +476,27 @@ function VideoLayer({ song, playing, paused, portrait, full, session, onBlocked 
   session: DisplaySession
   onBlocked: (blocked: boolean) => void
 }) {
+  const queryClient = useQueryClient()
   const area = full ? 'inset-0' : portrait ? 'inset-x-0 top-0 aspect-video' : `inset-y-0 left-0 ${BESIDE_STRIP}`
   return (
     <div className={`absolute ${area} bg-black ${playing ? '' : 'invisible'}`}>
-      {/* iPhones only play sound in the player someone tapped, so they keep one for the whole
-          session. Elsewhere each song gets a fresh player: a reused one on Android keeps
-          YouTube's buttons over the next video until someone touches the screen. */}
+      {/* iPhones only play sound in the player someone tapped, and a PC tab in the background
+          won't start a new player, so both keep one for the whole session. Android gets a
+          fresh player per song: a reused one keeps YouTube's buttons over the next video
+          until someone touches the screen. */}
       <YouTubePlayer
-        key={isAppleTouch() ? 'session' : `${song.id}:${song.youtube_video_id}`}
+        key={isAppleTouch() || !isTouchScreen() ? 'session' : `${song.id}:${song.youtube_video_id}`}
         itemId={song.id}
         videoId={song.youtube_video_id}
         paused={paused}
         idle={!playing}
         onStarted={(id) => void reportStarted(session, id).catch(() => {})}
-        onEnded={(id, reason, error) => void reportEnded(session, id, reason, error).catch(() => {})}
+        // Fetch the next song now: a silent background tab may poll only once a minute.
+        onEnded={(id, reason, error) =>
+          void reportEnded(session, id, reason, error)
+            .then(() => queryClient.invalidateQueries({ queryKey: ['display', session.roomId, session.token] }))
+            .catch(() => {})
+        }
         onBlocked={onBlocked}
       />
     </div>

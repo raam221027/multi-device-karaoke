@@ -125,7 +125,7 @@ export default function HomePage() {
           
         </h1>
         <p className="text-[15px] leading-[1.45] text-muted">
-         Start your room, invite your friends, and sing together.
+         Any Day. Any Song. Anytime.
         </p>
       </div>
 
@@ -191,7 +191,7 @@ export default function HomePage() {
       </div>
 
       <ol className="flex justify-between pt-2 text-[13px]">
-        {['Create a room', 'Invite your people', 'Sing together'].map((step, i) => (
+        {['Create a room', 'Invite your friends', 'Sing together'].map((step, i) => (
           <li key={step} className="flex flex-col gap-1.5">
             <span className="font-bold text-accent">0{i + 1}</span>
             <span className="text-muted">{step}</span>

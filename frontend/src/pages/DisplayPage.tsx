@@ -26,9 +26,11 @@ import { shortSongName } from '../lib/format'
 import { errorMessage, getMe, normalizeCode } from '../lib/rooms'
 import { joinUrl, publicHost } from '../lib/share'
 import type { QueueItem, RoomState } from '../lib/types'
+import { useRoomChannel } from '../lib/useRoomChannel'
 
-// The TV reacts to pause/skip from phones, so it polls faster than phones do.
+// The TV reacts to pause/skip from phones, so without Reverb it polls faster than phones do.
 const POLL_MS = 2000
+const LIVE_POLL_MS = 30_000
 
 // Safari on iPad (before 16.4) only has the webkit-prefixed fullscreen API.
 type WebkitDocument = Document & {
@@ -627,12 +629,20 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
   onArm: () => void
   onEnd: (notice: string) => void
 }) {
+  const queryClient = useQueryClient()
+  // Keyed by token: a screen replaced earlier in this room leaves a cached
+  // 401 behind, which would otherwise end the new connection straight away.
+  const queryKey = ['display', session.roomId, session.token]
+  const live = useRoomChannel(session.roomId, session.token, (version) => {
+    const cached = queryClient.getQueryData<RoomState>(queryKey)
+    if (version !== undefined && cached && cached.room.version >= version) return
+    void queryClient.invalidateQueries({ queryKey })
+  })
+
   const state = useQuery({
-    // Keyed by token: a screen replaced earlier in this room leaves a cached
-    // 401 behind, which would otherwise end the new connection straight away.
-    queryKey: ['display', session.roomId, session.token],
+    queryKey,
     queryFn: () => getDisplayState(session),
-    refetchInterval: POLL_MS,
+    refetchInterval: live ? LIVE_POLL_MS : POLL_MS,
     // A PC screen often sits behind other tabs; the next song must still start.
     refetchIntervalInBackground: true,
     retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 3,
@@ -652,7 +662,6 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
 
   // The host handed this screen the host role (a swap): same token, now a phone.
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const role = state.data?.me.role
   const becamePhone = fresh && role !== undefined && role !== 'display'
   useEffect(() => {

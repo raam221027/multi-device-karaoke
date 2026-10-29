@@ -3,9 +3,12 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, getToken, setToken } from './api'
 import { getRoomState } from './rooms'
+import type { RoomState } from './types'
+import { useRoomChannel } from './useRoomChannel'
 
-// Polling stands in for real-time until Reverb is wired up in Phase 3.
+// Reverb says when the room changes; polling is the fallback for when it can't.
 const POLL_MS = 4000
+const LIVE_POLL_MS = 30_000
 
 /**
  * Room state for the current device. If the session is gone (room closed,
@@ -14,13 +17,22 @@ const POLL_MS = 4000
 export function useRoomState(roomId: string | undefined) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const hasToken = getToken() !== null
+  const token = getToken()
+  const hasToken = token !== null
+  const queryKey = ['room', roomId, 'state']
+
+  const live = useRoomChannel(roomId, token, (version) => {
+    // Skip signals this device already has, like the echo of its own change.
+    const cached = queryClient.getQueryData<RoomState>(queryKey)
+    if (version !== undefined && cached && cached.room.version >= version) return
+    void queryClient.invalidateQueries({ queryKey })
+  })
 
   const query = useQuery({
-    queryKey: ['room', roomId, 'state'],
+    queryKey,
     queryFn: () => getRoomState(roomId!),
     enabled: hasToken && roomId !== undefined,
-    refetchInterval: POLL_MS,
+    refetchInterval: live ? LIVE_POLL_MS : POLL_MS,
     retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 3,
   })
 

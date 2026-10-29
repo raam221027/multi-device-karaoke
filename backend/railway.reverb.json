@@ -1,0 +1,10 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK"
+  },
+  "deploy": {
+    "startCommand": "php artisan reverb:start --host=0.0.0.0 --port=$PORT",
+    "restartPolicyType": "ON_FAILURE"
+  }
+}

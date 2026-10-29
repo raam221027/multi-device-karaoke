@@ -7,6 +7,7 @@ use App\Enums\ParticipantStatus;
 use App\Enums\PlaybackStatus;
 use App\Enums\QueueItemStatus;
 use App\Enums\RoomStatus;
+use App\Events\RoomChanged;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -110,10 +111,15 @@ class Room extends Model
         return $this->isOpen() && ! $this->is_locked;
     }
 
-    /** Every state change bumps the version; call inside the change's transaction. */
+    /**
+     * Every state change bumps the version; call inside the change's
+     * transaction. Devices in the room are told once it commits.
+     */
     public function bumpVersion(): void
     {
         $this->increment('version');
+
+        RoomChanged::afterCommit($this->id);
     }
 
     /**

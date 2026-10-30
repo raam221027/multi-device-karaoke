@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
 import Padlock from '../components/Padlock'
+import ScoringScreen from '../components/ScoringScreen'
 import YouTubePlayer from '../components/YouTubePlayer'
 import { Button, ButtonLink, ErrorText, Icon, TextInput } from '../components/ui'
 import { ApiError, getToken } from '../lib/api'
@@ -23,6 +24,8 @@ import {
   type DisplaySession,
 } from '../lib/display'
 import { shortSongName } from '../lib/format'
+import { randomScore } from '../lib/score'
+import { unlockAudio } from '../lib/scoringAudio'
 import { errorMessage, getMe, normalizeCode } from '../lib/rooms'
 import { joinUrl, publicHost } from '../lib/share'
 import type { QueueItem, RoomState } from '../lib/types'
@@ -312,6 +315,7 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
     e.preventDefault()
     if (ended && !asScreen) return setChoosing(true)
     fillTouchScreen()
+    unlockAudio()
     connect.mutate()
   }
 
@@ -351,6 +355,7 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
             icon={icons.monitor}
             onClick={() => {
               fillTouchScreen()
+              unlockAudio()
               connect.mutate()
             }}
             disabled={connect.isPending}
@@ -468,7 +473,7 @@ const STRIP = 'w-[max(120px,12cqw)]'
 const BESIDE_STRIP = 'right-[max(120px,12cqw)]'
 
 /** The video, one player for the whole session (see YouTubePlayer). Hidden between songs. */
-function VideoLayer({ song, playing, paused, portrait, full, session, onBlocked }: {
+function VideoLayer({ song, playing, paused, portrait, full, session, onBlocked, onFinished }: {
   song: QueueItem
   playing: boolean
   paused: boolean
@@ -477,6 +482,8 @@ function VideoLayer({ song, playing, paused, portrait, full, session, onBlocked 
   full: boolean
   session: DisplaySession
   onBlocked: (blocked: boolean) => void
+  /** The song played to the end (not skipped, not failed). */
+  onFinished: (itemId: number) => void
 }) {
   const queryClient = useQueryClient()
   const area = full ? 'inset-0' : portrait ? 'inset-x-0 top-0 aspect-video' : `inset-y-0 left-0 ${BESIDE_STRIP}`
@@ -494,11 +501,12 @@ function VideoLayer({ song, playing, paused, portrait, full, session, onBlocked 
         idle={!playing}
         onStarted={(id) => void reportStarted(session, id).catch(() => {})}
         // Fetch the next song now: a silent background tab may poll only once a minute.
-        onEnded={(id, reason, error) =>
+        onEnded={(id, reason, error) => {
+          if (reason === 'ended') onFinished(id)
           void reportEnded(session, id, reason, error)
             .then(() => queryClient.invalidateQueries({ queryKey: ['display', session.roomId, session.token] }))
             .catch(() => {})
-        }
+        }}
         onBlocked={onBlocked}
       />
     </div>
@@ -674,11 +682,25 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
     navigate(`/${role === 'host' ? 'host' : 'room'}/${session.roomId}`, { replace: true })
   }, [becamePhone, role, session, navigate, queryClient])
 
+  // A song that played to the end gets a score before the next one starts.
+  // Only this screen pauses for it: the server has already moved on.
+  const [scoring, setScoring] = useState<{ item: QueueItem; score: number } | null>(null)
+  // The song that just finished, which the server may still call current for a moment.
+  const [finishedId, setFinishedId] = useState<number | null>(null)
+
   // The song the player holds: the current one, or the last one while waiting for the next.
-  const current = state.data?.queue.current ?? null
+  // It stays on the finished song during the score, so the next video doesn't load (or sound) early.
+  const reported = state.data?.queue.current ?? null
+  const current = reported?.id === finishedId ? null : reported
   const [song, setSong] = useState<QueueItem | null>(null)
-  if (current && (current.id !== song?.id || current.youtube_video_id !== song.youtube_video_id)) setSong(current)
+  if (current && !scoring && (current.id !== song?.id || current.youtube_video_id !== song.youtube_video_id))
+    setSong(current)
   const [blocked, setBlocked] = useState(false)
+  const endScoring = useCallback(() => setScoring(null), [])
+  const onFinished = (itemId: number) => {
+    setFinishedId(itemId)
+    if (song?.id === itemId) setScoring({ item: song, score: randomScore() })
+  }
 
   // iPhone Home Screen mode can't go fullscreen for real, so the toggle turns the stage instead.
   const [sideways, setSideways] = useState(readSideways)
@@ -702,6 +724,7 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
           type="button"
           onClick={() => {
             fillTouchScreen()
+            unlockAudio()
             onArm()
           }}
           className="flex h-full w-full flex-col items-center justify-center gap-4 bg-screen">
@@ -727,15 +750,23 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
       {song && (
         <VideoLayer
           song={song}
-          playing={current !== null}
+          playing={current !== null && !scoring}
           paused={state.data.room.playback_status === 'paused'}
           portrait={portrait}
           full={!strip}
           session={session}
           onBlocked={setBlocked}
+          onFinished={onFinished}
         />
       )}
-      {current ? (
+      {scoring ? (
+        <ScoringScreen
+          item={scoring.item}
+          score={scoring.score}
+          volume={state.data.room.scoring_volume}
+          onDone={endScoring}
+        />
+      ) : current ? (
         strip && (
           <NowPlaying state={state.data} blocked={blocked} portrait={portrait} fullscreen={touch ? fullscreen : null} />
         )
@@ -743,7 +774,7 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
         <Invitation state={state.data} onDisconnect={disconnect} />
       )}
       {/* While a song plays the button lives in the info area: nothing may sit on the video. */}
-      {touch && !current && <FullscreenToggle fullscreen={fullscreen} />}
+      {touch && !current && !scoring && <FullscreenToggle fullscreen={fullscreen} />}
     </Stage>
   )
 }

@@ -34,13 +34,22 @@ it('lets the host change room settings', function () {
             'allow_song_additions' => false,
             'guests_can_skip' => true,
             'show_side_strip' => false,
+            'scoring_volume' => 40,
         ])
         ->assertOk()
         ->assertJsonPath('data.name', 'Rooftop')
         ->assertJsonPath('data.is_locked', true)
         ->assertJsonPath('data.allow_song_additions', false)
         ->assertJsonPath('data.guests_can_skip', true)
-        ->assertJsonPath('data.show_side_strip', false);
+        ->assertJsonPath('data.show_side_strip', false)
+        ->assertJsonPath('data.scoring_volume', 40);
+});
+
+it('keeps the scoring volume between 0 and 100', function () {
+    asDevice($this->hostToken)
+        ->patchJson("/api/rooms/{$this->room->id}", ['scoring_volume' => 101])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('scoring_volume');
 });
 
 it('does not let guests change settings', function () {

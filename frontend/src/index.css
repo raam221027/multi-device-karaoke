@@ -20,6 +20,31 @@
   /* Avatar palette */
   --color-lilac: #b7a8ea;
   --color-peach: #e9b899;
+
+  /* The scoring screen after a song */
+  --animate-score-in: score-in 400ms ease-out both;
+  --animate-score-pop: score-pop 600ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  --animate-score-glow: score-glow 1.6s ease-in-out infinite;
+
+  @keyframes score-in {
+    from {
+      opacity: 0;
+      transform: translateY(1.5cqh);
+    }
+  }
+  @keyframes score-pop {
+    0% {
+      transform: scale(0.85);
+    }
+    50% {
+      transform: scale(1.15);
+    }
+  }
+  @keyframes score-glow {
+    50% {
+      opacity: 0.45;
+    }
+  }
 }
 
 html,

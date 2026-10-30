@@ -10,6 +10,7 @@ export type Room = {
   allow_song_additions: boolean
   guests_can_skip: boolean
   show_side_strip: boolean
+  scoring_volume: number
   playback_status: 'playing' | 'paused'
   paused_at: string | null
   paused_seconds: number
@@ -95,4 +96,4 @@ export type RoomState = {
   fetchedAt: number
 }
 
-export type RoomSettings = Partial<Pick<Room, 'name' | 'is_locked' | 'allow_song_additions' | 'guests_can_skip' | 'show_side_strip'>>
+export type RoomSettings = Partial<Pick<Room, 'name' | 'is_locked' | 'allow_song_additions' | 'guests_can_skip' | 'show_side_strip' | 'scoring_volume'>>

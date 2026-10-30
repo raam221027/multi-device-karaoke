@@ -14,6 +14,7 @@ class UpdateRoomRequest extends FormRequest
             'allow_song_additions' => ['sometimes', 'boolean'],
             'guests_can_skip' => ['sometimes', 'boolean'],
             'show_side_strip' => ['sometimes', 'boolean'],
+            'scoring_volume' => ['sometimes', 'integer', 'between:0,100'],
         ];
     }
 }

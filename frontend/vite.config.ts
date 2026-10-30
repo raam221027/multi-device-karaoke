@@ -30,6 +30,8 @@ export default defineConfig({
     proxy: {
       '/api': backend,
       '/broadcasting': backend,
+      // Reverb's WebSocket, so LAN devices on this HTTPS page connect over wss like production.
+      '^/app/': { target: 'http://127.0.0.1:8080', ws: true },
     },
   },
 })

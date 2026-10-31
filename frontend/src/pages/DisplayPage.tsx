@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import * as icons from '../assets/icons'
+import CodeKeypad from '../components/CodeKeypad'
 import Padlock from '../components/Padlock'
 import ScoringScreen from '../components/ScoringScreen'
 import YouTubePlayer from '../components/YouTubePlayer'
@@ -17,6 +18,7 @@ import {
   displayEnded,
   getDisplaySession,
   getDisplayState,
+  isTv,
   markDisplayEnded,
   reportEnded,
   reportStarted,
@@ -311,12 +313,21 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
   const phone = useQuery({ queryKey: ['me', phoneToken], queryFn: getMe, enabled: phoneToken !== null, retry: false })
   const hosting = phoneToken && phone.data?.participant.role === 'host' ? phone.data.room : null
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault()
+  // A TV remote picks the code from on-screen keys: the TV's own keyboard tends
+  // to close as soon as it opens. Everything else types it as usual.
+  const tv = isTv()
+  const [keypad, setKeypad] = useState(tv)
+
+  function submit() {
     if (ended && !asScreen) return setChoosing(true)
     fillTouchScreen()
     unlockAudio()
     connect.mutate()
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    submit()
   }
 
   return (
@@ -375,23 +386,48 @@ function ConnectScreen({ notice: endNotice, onConnected }: { notice?: string; on
               Connecting will replace any screen already in this room.
             </p>
           )}
-          <form onSubmit={onSubmit} className="flex flex-col gap-2.5">
-            <TextInput
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Room code"
-              aria-label="Room code"
-              autoCapitalize="characters"
-              autoComplete="off"
-              maxLength={8}
-              autoFocus
-              className="text-center font-bold tracking-[0.3em] uppercase"
-            />
-            <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
-            <Button type="submit" icon={icons.plusOnAccent} disabled={normalizeCode(code).length !== 6 || connect.isPending}>
-              {connect.isPending ? 'Connecting…' : 'Connect'}
-            </Button>
-          </form>
+          {keypad ? (
+            <div className="flex flex-col gap-2.5">
+              <p
+                aria-label="Room code"
+                aria-live="polite"
+                className="flex h-[54px] items-center justify-center rounded-2xl border border-line bg-surface text-[24px] font-bold tracking-[0.3em]"
+              >
+                {normalizeCode(code) || <span className="text-[16px] font-normal tracking-normal text-muted">Room code</span>}
+              </p>
+              <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
+              <CodeKeypad
+                value={normalizeCode(code)}
+                onChange={setCode}
+                onSubmit={submit}
+                disabled={connect.isPending}
+                submitLabel={connect.isPending ? 'Connecting…' : 'Connect'}
+              />
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="flex flex-col gap-2.5">
+              <TextInput
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Room code"
+                aria-label="Room code"
+                autoCapitalize="characters"
+                autoComplete="off"
+                maxLength={8}
+                autoFocus
+                className="text-center font-bold tracking-[0.3em] uppercase"
+              />
+              <ErrorText>{connect.isError && errorMessage(connect.error)}</ErrorText>
+              <Button type="submit" icon={icons.plusOnAccent} disabled={normalizeCode(code).length !== 6 || connect.isPending}>
+                {connect.isPending ? 'Connecting…' : 'Connect'}
+              </Button>
+            </form>
+          )}
+          {tv && (
+            <button type="button" onClick={() => setKeypad(!keypad)} className="py-2 text-[14px] text-accent">
+              {keypad ? 'Type with a keyboard instead' : 'Use the on-screen keys'}
+            </button>
+          )}
         </>
       )}
     </main>

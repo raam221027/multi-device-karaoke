@@ -80,12 +80,19 @@ export async function currentPhone() {
 /** What kind of device this browser is on, so the host can tell screens apart. */
 export function deviceType(): 'Mobile' | 'Tablet' | 'PC' | 'TV' {
   const ua = navigator.userAgent
-  if (/SmartTV|SMART-TV|Tizen|Web0S|webOS|HbbTV|BRAVIA|AFT|CrKey|GoogleTV/i.test(ua)) return 'TV'
+  if (/SmartTV|SMART-TV|Tizen|Web0S|webOS|HbbTV|BRAVIA|AFT|CrKey|GoogleTV|Android ?TV|Roku/i.test(ua)) return 'TV'
+  // Android with no touch screen is a TV box or TV (TCL's Google TV browsers say nothing else).
+  if (/Android/.test(ua) && navigator.maxTouchPoints === 0) return 'TV'
   // iPadOS reports itself as a Mac; only the touch screen gives it away.
   const iPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
   if (iPad || /Tablet/i.test(ua) || (/Android/.test(ua) && !/Mobile/.test(ua))) return 'Tablet'
   if (/Mobi|iPhone|Android/.test(ua)) return 'Mobile'
   return 'PC'
+}
+
+/** Driven by a remote: no touch, and the TV's own keyboard is unreliable in web pages. */
+export function isTv(): boolean {
+  return deviceType() === 'TV'
 }
 
 /** "phone", "tablet", "PC" or "TV", for sentences like "use this PC as the display". */

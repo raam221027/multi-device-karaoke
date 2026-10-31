@@ -16,8 +16,8 @@ Draft answers for the [YouTube API Services quota extension form](https://suppor
 
 | Call | Cost | When |
 |---|---|---|
-| `search.list` (`type=video`, `videoEmbeddable=true`, `maxResults=20`) | 100 | A guest submits a search, taps "More", or a song's video fails to play on the TV and the app looks for another upload of the same song. |
-| `videos.list` (`part=snippet,contentDetails,status`, up to 20 ids) | 1 | Once per search page, for duration, embeddability and age restriction; and when a song is added, to check the chosen video. |
+| `search.list` (`type=video`, `videoEmbeddable=true`, `maxResults=10`) | 100 | A guest submits a search, taps "More", or a song's video fails to play on the TV and the app looks for another upload of the same song. |
+| `videos.list` (`part=snippet,contentDetails,status`, up to 10 ids) | 1 | Once per search page, for duration, embeddability and age restriction; and when a song is added, to check the chosen video. |
 
 Only API keys are used, with no OAuth and no user data from YouTube. Videos play in the official IFrame player and are never downloaded or changed.
 
@@ -26,7 +26,7 @@ Only API keys are used, with no OAuth and no user data from YouTube. Videos play
 - **Search only on submit.** Suggestions while typing come from the free iTunes Search API, not YouTube.
 - **Shared cache.** Every room shares a server-side cache. A search page and its video details are kept for 7 days, keyed by the normalized query, so "Alapaap!", "alapaap" and "Karaoke Alapaap" are one search.
 - **Popular songs** on the search screen come from 6 searches refreshed once a week for all rooms.
-- **20 results per search**, so guests tap "More" less often.
+- **10 results per search page.** A song search usually wants one of the first few hits, and a smaller page returns faster. "More" fetches the next 10, and each page is cached like any search.
 - **Rate limits:** 10 searches a minute per guest.
 - **Daily budget guard:** the server counts units per Pacific day and stops new searches at 95% of the quota. When search is paused, cached searches, popular songs and adding songs keep working, and guests see "Song search is resting until tomorrow." A `quotaExceeded` answer also pauses search until midnight Pacific instead of retrying.
 - **Alternate videos** are searched only after a real playback failure reported by the TV.
@@ -45,7 +45,7 @@ Run `php artisan youtube:usage` on the server (Railway shell) at the end of a bu
 Estimate per party (replace with measured numbers):
 
 - About [15] guests adding about [3] songs each is about [45] songs.
-- About [1.5] searches per song is about [65] searches, including "More" taps.
+- About [1.5] searches per song is about [65] searches, including "More" taps. (Pages are 10 results, so measure this with `php artisan youtube:usage` rather than guessing: "More" may be tapped a little more often than with 20.)
 - With a [40]% cache hit rate, that's about [40] YouTube searches × 101 units, about **[4,000] units per party**.
 
 The default 10,000 units covers about [2] parties a day. To support [25] parties a day, request **[100,000] units per day**.

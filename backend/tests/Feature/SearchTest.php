@@ -42,6 +42,33 @@ it('names the song, not the band, in results', function () {
         ->assertJsonPath('results.0.artist', 'Orient Pearl');
 });
 
+it('asks YouTube for 10 results a page and names every song in one round of lookups', function () {
+    config(['services.youtube.key' => 'test-key']);
+    Http::fake([
+        'www.googleapis.com/youtube/v3/search*' => Http::response(['items' => [
+            ['id' => ['videoId' => 'aaaaaaaaaaa']],
+            ['id' => ['videoId' => 'bbbbbbbbbbb']],
+        ]]),
+        'www.googleapis.com/youtube/v3/videos*' => Http::response(['items' => [
+            ['id' => 'aaaaaaaaaaa', 'snippet' => ['title' => 'Alapaap - Eraserheads (Karaoke)'], 'contentDetails' => ['duration' => 'PT4M10S']],
+            ['id' => 'bbbbbbbbbbb', 'snippet' => ['title' => 'Eraserheads - Alapaap (Karaoke Version)'], 'contentDetails' => ['duration' => 'PT4M10S']],
+        ]]),
+        'itunes.apple.com/*' => Http::response(['results' => [['trackName' => 'Alapaap', 'artistName' => 'Eraserheads']]]),
+    ]);
+
+    asDevice($this->guestToken)
+        ->getJson("/api/rooms/{$this->room->id}/search?q=Alapaap")
+        ->assertOk()
+        ->assertJsonPath('results.0.song_title', 'Alapaap')
+        ->assertJsonPath('results.0.artist', 'Eraserheads')
+        ->assertJsonPath('results.1.song_title', 'Alapaap')
+        ->assertJsonPath('results.1.artist', 'Eraserheads');
+
+    Http::assertSent(fn ($r) => str_contains($r->url(), '/search?') && str_contains($r->url(), 'maxResults=10'));
+    // One song lookup per title, and no artist lookups: the catalogue settled both.
+    expect(Http::recorded(fn ($r) => str_contains($r->url(), 'itunes.apple.com')))->toHaveCount(2);
+});
+
 it('caches results by normalized query', function () {
     fakeYouTube();
 

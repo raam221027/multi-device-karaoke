@@ -24,10 +24,12 @@ class SearchController extends Controller
 
         $page = $youtube->searchPage($data['q'], $request->boolean('karaoke', true), $data['page'] ?? null);
 
+        // Titles come in both orders, so look up which half is the song (cached per title).
+        $songs = $songInfo->identifyMany(array_column($page['videos'], 'title'));
+
         return response()->json([
-            // Titles come in both orders, so look up which half is the song (cached per title).
-            'results' => array_map(function (array $video) use ($songInfo) {
-                $info = $songInfo->identify($video['title']);
+            'results' => array_map(function (array $video) use ($songs) {
+                $info = $songs[$video['title']] ?? null;
 
                 return [...$video, 'song_title' => $info['song'] ?? null, 'artist' => $info['artist'] ?? null];
             }, $page['videos']),

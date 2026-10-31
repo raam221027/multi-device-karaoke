@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Throwable;
 
 /**
  * Works out which half of a "X - Y" karaoke title is the song. Uploaders use
@@ -16,44 +17,97 @@ class SongInfo
     /** @return array{song: string, artist: string}|null null when the order can't be told */
     public function identify(string $title): ?array
     {
-        $halves = self::halves($title);
-        if ($halves === null) {
-            return null;
-        }
-
-        [$first, $second] = $halves;
-        $key = 'song-info:'.md5(mb_strtolower("{$first}|{$second}"));
-
-        $cached = Cache::get($key);
-        if ($cached !== null) {
-            return $cached ?: null;
-        }
-
-        try {
-            $artistFirst = $this->artistComesFirst($first, $second);
-        } catch (Throwable) {
-            return null; // Not cached, so the next song with this title tries again.
-        }
-
-        $info = match ($artistFirst) {
-            true => ['song' => $second, 'artist' => $first],
-            false => ['song' => $first, 'artist' => $second],
-            null => [],
-        };
-
-        Cache::put($key, $info, now()->addDays(30));
-
-        return $info ?: null;
+        return $this->identifyMany([$title])[$title];
     }
 
     /**
-     * Look for the song first (matching track and artist together); a song
-     * missing from the catalogue can still be placed by a known artist name.
+     * identify() for a page of search results. The catalogue lookups for all
+     * the titles go out together instead of one after another, so a page of
+     * new titles takes about as long as one.
+     *
+     * @param  list<string>  $titles
+     * @return array<string, array{song: string, artist: string}|null> keyed by title
      */
-    private function artistComesFirst(string $first, string $second): ?bool
+    public function identifyMany(array $titles): array
+    {
+        $found = [];
+        $pending = [];
+        foreach (array_unique($titles) as $title) {
+            $halves = self::halves($title);
+            $cached = $halves === null ? [] : Cache::get(self::cacheKey(...$halves));
+            if ($cached === null) {
+                $pending[$title] = $halves;
+            } else {
+                $found[$title] = $cached ?: null;
+            }
+        }
+        if ($pending === []) {
+            return $found;
+        }
+
+        // Look for the song first (matching track and artist together).
+        $songs = $this->searchAll(array_map(fn ($halves) => implode(' ', $halves), $pending), 'song');
+        $order = [];
+        $tied = [];
+        foreach ($pending as $title => [$first, $second]) {
+            if ($songs[$title] === null) {
+                $found[$title] = null; // Not cached, so the next song with this title tries again.
+
+                continue;
+            }
+
+            [$artistFirst, $songFirst] = self::votes($first, $second, $songs[$title]);
+            if ($artistFirst !== $songFirst) {
+                $order[$title] = $artistFirst > $songFirst;
+            } else {
+                $tied[$title] = [$first, $second];
+            }
+        }
+
+        // A song missing from the catalogue can still be placed by a known artist name.
+        $names = array_values(array_unique(array_merge(...array_values($tied))));
+        $artists = $names === [] ? [] : $this->searchAll(array_combine($names, $names), 'musicArtist');
+        foreach ($tied as $title => [$first, $second]) {
+            if ($artists[$first] === null || $artists[$second] === null) {
+                $found[$title] = null;
+
+                continue;
+            }
+
+            $firstIsArtist = self::isArtist($first, $artists[$first]);
+            $secondIsArtist = self::isArtist($second, $artists[$second]);
+            $order[$title] = $firstIsArtist === $secondIsArtist ? null : $firstIsArtist;
+        }
+
+        foreach ($order as $title => $artistFirst) {
+            [$first, $second] = $pending[$title];
+            $info = match ($artistFirst) {
+                true => ['song' => $second, 'artist' => $first],
+                false => ['song' => $first, 'artist' => $second],
+                null => [],
+            };
+
+            Cache::put(self::cacheKey($first, $second), $info, now()->addDays(30));
+            $found[$title] = $info ?: null;
+        }
+
+        return $found;
+    }
+
+    private static function cacheKey(string $first, string $second): string
+    {
+        return 'song-info:'.md5(mb_strtolower("{$first}|{$second}"));
+    }
+
+    /**
+     * How many catalogue songs read "artist - song" and how many "song - artist".
+     *
+     * @return array{int, int}
+     */
+    private static function votes(string $first, string $second, array $results): array
     {
         $artistFirst = $songFirst = 0;
-        foreach ($this->search("{$first} {$second}", 'song') as $result) {
+        foreach ($results as $result) {
             $track = (string) ($result['trackName'] ?? '');
             $artist = (string) ($result['artistName'] ?? '');
 
@@ -65,34 +119,43 @@ class SongInfo
             }
         }
 
-        if ($artistFirst !== $songFirst) {
-            return $artistFirst > $songFirst;
-        }
-
-        $isArtist = fn (string $name) => collect($this->search($name, 'musicArtist'))
-            ->contains(fn ($result) => self::normalize((string) ($result['artistName'] ?? '')) === self::normalize($name));
-
-        $firstIsArtist = $isArtist($first);
-        $secondIsArtist = $isArtist($second);
-
-        return $firstIsArtist === $secondIsArtist ? null : $firstIsArtist;
+        return [$artistFirst, $songFirst];
     }
 
-    /** @return list<array<string, mixed>> */
-    private function search(string $term, string $entity): array
+    private static function isArtist(string $name, array $results): bool
     {
-        $results = Http::timeout(3)
-            ->acceptJson()
-            ->get('https://itunes.apple.com/search', [
-                'term' => $term,
-                'media' => 'music',
-                'entity' => $entity,
-                'limit' => 15,
-            ])
-            ->throw()
-            ->json('results');
+        return collect($results)
+            ->contains(fn ($result) => self::normalize((string) ($result['artistName'] ?? '')) === self::normalize($name));
+    }
 
-        return is_array($results) ? $results : [];
+    /**
+     * Catalogue searches, all sent at once.
+     *
+     * @param  array<string, string>  $terms  search terms by key
+     * @return array<string, list<array<string, mixed>>|null> results by the same key, null where the request failed
+     */
+    private function searchAll(array $terms, string $entity): array
+    {
+        $responses = Http::pool(function (Pool $pool) use ($terms, $entity) {
+            foreach ($terms as $key => $term) {
+                $pool->as((string) $key)->timeout(3)->acceptJson()->get('https://itunes.apple.com/search', [
+                    'term' => $term,
+                    'media' => 'music',
+                    'entity' => $entity,
+                    'limit' => 15,
+                ]);
+            }
+        });
+
+        return array_map(function ($response) {
+            // A timeout or connection error comes back as an exception instead of a response.
+            if (! $response instanceof Response || $response->failed()) {
+                return null;
+            }
+            $results = $response->json('results');
+
+            return is_array($results) ? $results : [];
+        }, $responses);
     }
 
     /**

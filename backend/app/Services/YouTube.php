@@ -53,7 +53,7 @@ class YouTube
     public function searchPage(string $query, bool $karaoke = true, ?string $pageToken = null): array
     {
         $q = self::normalizeQuery($query, $karaoke);
-        $key = 'youtube:search:v4:'.sha1($q.'|'.($pageToken ?? ''));
+        $key = 'youtube:search:v5:'.sha1($q.'|'.($pageToken ?? ''));
 
         $page = Cache::get($key);
         if ($page !== null) {
@@ -66,8 +66,9 @@ class YouTube
                 'part' => 'snippet',
                 'type' => 'video',
                 'videoEmbeddable' => 'true',
-                // Same 100 units for 20 results as for 12, so fewer "More" taps.
-                'maxResults' => 20,
+                // A song search wants the first few hits, and each one is looked up
+                // before the page returns, so 10 keeps it quick. "More" fetches the next 10.
+                'maxResults' => 10,
                 'q' => $q,
                 'pageToken' => $pageToken,
             ]));

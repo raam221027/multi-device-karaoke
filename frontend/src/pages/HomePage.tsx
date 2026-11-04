@@ -45,13 +45,16 @@ function ResumeSession() {
   )
 }
 
+// Read once per page load, so rendering stays pure.
+const YEAR = new Date().getFullYear()
+
 /** Clicking the email copies it and opens a Gmail draft to it in a new tab. */
 function ContactFooter() {
   const { status, copy } = useShare()
 
   return (
     <p className="text-center text-[12px] leading-[1.45] text-muted">
-      © {new Date().getFullYear()} Videokehan · Contact:{' '}
+      © {YEAR} Videokehan · Contact:{' '}
       <a
         href={`https://mail.google.com/mail/?view=cm&to=${CONTACT_EMAIL}`}
         target="_blank"

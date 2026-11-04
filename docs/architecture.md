@@ -7,7 +7,7 @@ Browser-based karaoke for multiple phones. The host runs the room from a phone, 
 | Layer | Choice |
 |---|---|
 | Frontend | React + TypeScript + Vite + Tailwind CSS v4, TanStack Query, React Router |
-| Backend | Laravel 12 REST API (PHP 8.2+) |
+| Backend | Laravel 12 REST API (PHP 8.4+) |
 | Auth | Laravel Sanctum personal access tokens, one per device, with the role as the token ability |
 | Real-time | Laravel Reverb (Pusher protocol) + Laravel Echo |
 | Database | MySQL |

@@ -12,7 +12,7 @@ docs/       Architecture and design notes
 
 ## Prerequisites
 
-- PHP 8.2+ with `pdo_mysql` (XAMPP works)
+- PHP 8.4+ with `pdo_mysql` (XAMPP works)
 - Composer 2
 - Node.js 20+ and npm
 - MySQL 8 / MariaDB 10.4+ (XAMPP's MySQL works)

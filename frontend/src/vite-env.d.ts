@@ -12,6 +12,9 @@ interface ImportMetaEnv {
 /** The dev machine's LAN IPv4 address (injected by vite.config.ts), or ''. */
 declare const __LAN_HOST__: string
 
+/** Whether to log realtime connection state (false on Vercel production builds). */
+declare const __REALTIME_DEBUG__: boolean
+
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }

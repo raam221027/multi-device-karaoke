@@ -39,8 +39,9 @@ export default function CodeKeypad({ value, onChange, onSubmit, disabled, submit
   const complete = value.length === LENGTH
 
   // Start on the first key, or on Connect when the code came prefilled.
+  const startedComplete = useRef(complete)
   useEffect(() => {
-    if (complete) submit.current?.focus()
+    if (startedComplete.current) submit.current?.focus()
     else grid.current?.querySelector('button')?.focus()
     // Only on mount: afterwards focus stays where the remote put it.
   }, [])

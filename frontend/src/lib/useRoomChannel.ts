@@ -21,13 +21,19 @@ export function useRoomChannel(
   })
 
   useEffect(() => {
-    if (!realtimeEnabled || roomId === undefined || !token) return
+    // Realtime failures fall back to polling silently, so log enough to tell why from the console.
+    if (!realtimeEnabled || roomId === undefined || !token) {
+      console.info('[realtime] off', { realtimeEnabled, roomId, hasToken: Boolean(token) })
+      return
+    }
 
     const name = `room.${roomId}`
     const { echo, release } = acquireEcho(token)
     const connection = echo.connector.pusher.connection
+    console.info('[realtime] socket', connection.state)
 
-    const onState = ({ current }: { current: string }) => {
+    const onState = ({ previous, current }: { previous: string; current: string }) => {
+      console.info('[realtime]', previous, '→', current)
       // pusher-js resubscribes after a reconnect, and subscribed() fires again then.
       if (current !== 'connected') setLive(false)
     }
@@ -36,10 +42,14 @@ export function useRoomChannel(
     echo
       .private(name)
       .subscribed(() => {
+        console.info('[realtime] subscribed', name)
         setLive(true)
         onChangeRef.current()
       })
-      .error(() => setLive(false))
+      .error((error: unknown) => {
+        console.warn('[realtime] subscribe failed', name, error)
+        setLive(false)
+      })
       .listen('.room.changed', (event: { version: number }) => onChangeRef.current(event.version))
 
     return () => {

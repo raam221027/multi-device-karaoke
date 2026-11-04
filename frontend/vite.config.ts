@@ -24,6 +24,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), basicSsl()],
   define: {
     __LAN_HOST__: JSON.stringify(lanHost()),
+    // Vercel sets VERCEL_ENV; staging (preview) and local builds keep the realtime console logs.
+    __REALTIME_DEBUG__: JSON.stringify(process.env.VERCEL_ENV !== 'production'),
   },
   server: {
     host: true, // expose on the LAN so phones can connect

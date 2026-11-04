@@ -489,17 +489,17 @@ function Invitation({ state, onDisconnect }: { state: RoomState; onDisconnect: (
 
 /** True for a few seconds after the server swaps in another upload of the current song. */
 function useSwapNotice(current: QueueItem): boolean {
-  const [shownFor, setShownFor] = useState<string | null>(null)
+  // Track the swap whose notice has run out, so a new swap shows on its first render.
+  const [expired, setExpired] = useState<string | null>(null)
   const key = current.video_swaps > 0 ? `${current.id}:${current.youtube_video_id}` : null
 
   useEffect(() => {
     if (!key) return
-    setShownFor(key)
-    const timer = setTimeout(() => setShownFor(null), 8000)
+    const timer = setTimeout(() => setExpired(key), 8000)
     return () => clearTimeout(timer)
   }, [key])
 
-  return key !== null && shownFor === key
+  return key !== null && expired !== key
 }
 
 // The strip beside the video while a song plays (a panel below it on a phone

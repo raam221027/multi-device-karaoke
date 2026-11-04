@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { acquireEcho, realtimeEnabled } from './echo'
 
+// Realtime failures fall back to polling silently, so non-production builds log enough
+// to tell why from the console. The flag is a build-time constant, so production drops these calls.
+const debug = __REALTIME_DEBUG__
+
 /**
  * Listen for "room changed" signals from Reverb. onChange gets the room's new
  * version, or nothing when (re)subscribing: signals sent while the socket was
@@ -21,13 +25,18 @@ export function useRoomChannel(
   })
 
   useEffect(() => {
-    if (!realtimeEnabled || roomId === undefined || !token) return
+    if (!realtimeEnabled || roomId === undefined || !token) {
+      if (debug) console.info('[realtime] off', { realtimeEnabled, roomId, hasToken: Boolean(token) })
+      return
+    }
 
     const name = `room.${roomId}`
     const { echo, release } = acquireEcho(token)
     const connection = echo.connector.pusher.connection
+    if (debug) console.info('[realtime] socket', connection.state)
 
-    const onState = ({ current }: { current: string }) => {
+    const onState = ({ previous, current }: { previous: string; current: string }) => {
+      if (debug) console.info('[realtime]', previous, '→', current)
       // pusher-js resubscribes after a reconnect, and subscribed() fires again then.
       if (current !== 'connected') setLive(false)
     }
@@ -36,10 +45,14 @@ export function useRoomChannel(
     echo
       .private(name)
       .subscribed(() => {
+        if (debug) console.info('[realtime] subscribed', name)
         setLive(true)
         onChangeRef.current()
       })
-      .error(() => setLive(false))
+      .error((error: unknown) => {
+        if (debug) console.warn('[realtime] subscribe failed', name, error)
+        setLive(false)
+      })
       .listen('.room.changed', (event: { version: number }) => onChangeRef.current(event.version))
 
     return () => {

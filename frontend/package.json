@@ -13,6 +13,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.104.2",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.10.6",
     "jsqr": "^1.4.0",
     "laravel-echo": "^2.6.1",
     "pusher-js": "^8.6.0",

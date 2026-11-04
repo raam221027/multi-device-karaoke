@@ -3,7 +3,7 @@
 - **Vercel** serves the React SPA (`frontend/`).
 - **Railway** runs Laravel (`backend/`) and MySQL. It doesn't sleep when idle, which matters mid-party.
 
-The browser only ever talks to the Vercel domain. `frontend/vercel.json` rewrites `/api/*` and `/broadcasting/*` to Railway, the same way the Vite dev proxy does locally. So the SPA keeps calling relative paths, and there's no CORS to configure. Devices sign in with bearer tokens, not cookies, so the extra hop doesn't affect auth.
+The browser only ever talks to the Vercel domain. `frontend/middleware.ts` (Vercel Routing Middleware) proxies `/api/*` and `/broadcasting/*` to the Railway API named by `API_ORIGIN`, the same way the Vite dev proxy does locally. So the SPA keeps calling relative paths, and there's no CORS to configure. Devices sign in with bearer tokens, not cookies, so the extra hop doesn't affect auth.
 
 HTTPS is required because phones only open the camera for the QR scanner on a secure page. Both `*.vercel.app` and `*.up.railway.app` come with HTTPS.
 
@@ -45,19 +45,48 @@ Pricing changes, so check it when you sign up. Vercel Hobby is free. Railway giv
 
 ## 2. Vercel: frontend
 
-1. In `frontend/vercel.json`, replace both `RAILWAY_DOMAIN` placeholders with `<railway-domain>`, then commit and push.
-2. Go to vercel.com → **Add New → Project** → import this repo.
+1. Go to vercel.com → **Add New → Project** → import this repo.
    - **Root Directory**: `frontend`
    - Framework preset **Vite**. The defaults are fine: build with `npm run build`, output to `dist`.
-   - You don't need any env vars. If `VITE_PUBLIC_URL` is empty, QR codes and invite links use the page's own address.
-3. Deploy. You get `<vercel-domain>`, e.g. `karaoke.vercel.app`.
-4. Back on Railway, set `FRONTEND_URL=https://<vercel-domain>`. Railway redeploys on its own.
+   - Under **Environment Variables** (Production), set `API_ORIGIN=https://<railway-domain>`. If it's missing, `frontend/middleware.ts` falls back to the production Railway domain. If `VITE_PUBLIC_URL` is empty, QR codes and invite links use the page's own address.
+2. Deploy. You get `<vercel-domain>`, e.g. `karaoke.vercel.app`.
+3. Back on Railway, set `FRONTEND_URL=https://<vercel-domain>`. Railway redeploys on its own.
 
 Open `https://<vercel-domain>`. The home page shows the API and database status.
 
 ## Updating
 
 Push to `main`. Vercel and Railway both rebuild automatically, and Railway runs `migrate --force` before switching over.
+
+## Staging: `develop` → Railway staging
+
+Test on staging before production: merge into `develop`, check it on the staging site, then merge `develop` into `main`. Staging has its own database, so test rooms never touch production.
+
+**Railway** (in the **staging** environment, a duplicate of production):
+
+1. On both the API and Reverb services, go to **Settings → Source** and set the branch to `develop`.
+2. Generate a domain for each service. Duplicates don't copy domains. The API is `videokehan-staging.up.railway.app`.
+3. API variables:
+   - `APP_URL=https://videokehan-staging.up.railway.app`
+   - `FRONTEND_URL=https://<vercel-develop-domain>`
+   - `APP_ENV=staging`
+   - Check that `DB_URL` references the staging MySQL.
+4. Reverb variables: `REVERB_ALLOWED_ORIGINS=<vercel-develop-domain>`. Its `REVERB_APP_*` values must match the staging API's.
+
+**Vercel:**
+
+1. **Settings → Domains**: add a domain and assign it to Git branch `develop`. This gives staging a stable URL for `FRONTEND_URL`.
+2. **Environment Variables**, scope **Preview**, branch `develop`:
+
+   ```dotenv
+   API_ORIGIN=https://videokehan-staging.up.railway.app
+   VITE_REVERB_APP_KEY=<staging REVERB_APP_KEY>
+   VITE_REVERB_HOST=reverb-staging-e23f.up.railway.app
+   VITE_REVERB_PORT=443
+   VITE_REVERB_SCHEME=https
+   ```
+
+3. Redeploy `develop`. `VITE_*` values are baked in at build time.
 
 ## Later: Reverb (Phase 3)
 

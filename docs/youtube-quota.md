@@ -45,7 +45,7 @@ Run `php artisan youtube:usage` on the server (Railway shell) at the end of a bu
 Estimate per party (replace with measured numbers):
 
 - About [15] guests adding about [3] songs each is about [45] songs.
-- About [1.5] searches per song is about [65] searches, including "More" taps. (Pages are 10 results, so measure this with `php artisan youtube:usage` rather than guessing: "More" may be tapped a little more often than with 20.)
+- About [1.5] searches per song is about [65] searches, including "More" taps. (Measure this with `php artisan youtube:usage` rather than guessing.)
 - With a [40]% cache hit rate, that's about [40] YouTube searches × 101 units, about **[4,000] units per party**.
 
 The default 10,000 units covers about [2] parties a day. To support [25] parties a day, request **[100,000] units per day**.

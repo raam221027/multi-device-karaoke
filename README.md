@@ -67,11 +67,6 @@ cd frontend && npm run build        # type-check + production build
 
 See [docs/deploy.md](docs/deploy.md): the frontend on Vercel (`frontend/vercel.json` proxies `/api` to the backend), and Laravel + MySQL on Railway (`backend/railway.json`).
 
-## Pushing to GitHub
+## License
 
-Create an **empty** repository on github.com (no README or .gitignore), then:
-
-```bash
-git remote add origin https://github.com/<you>/multi-device-karaoke.git
-git push -u origin main
-```
+[MIT](LICENSE). If you run your own copy, you need your own YouTube Data API key and must follow the [YouTube API Services Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service).

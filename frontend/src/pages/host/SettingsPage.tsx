@@ -157,29 +157,41 @@ export default function SettingsPage() {
           checked={value.show_side_strip}
           onChange={(show) => change({ show_side_strip: show })}
         />
-        <div className="flex flex-col gap-1.5 border-b border-line py-[15px]">
-          <div className="flex items-center justify-between gap-4">
-            <label htmlFor="scoring-volume" className="text-[15px]">
-              Scoring sound
-            </label>
-            <span className="text-[14px] text-muted tabular-nums">
-              {value.scoring_volume === 0 ? 'Off' : `${value.scoring_volume}%`}
-            </span>
+        <Permission
+          title="Scoring"
+          detail={
+            value.scoring_enabled
+              ? 'On. Each singer gets a score after their song.'
+              : 'Off. The next song starts right away.'
+          }
+          checked={value.scoring_enabled}
+          onChange={(on) => change({ scoring_enabled: on })}
+        />
+        {value.scoring_enabled && (
+          <div className="flex flex-col gap-1.5 border-b border-line py-[15px]">
+            <div className="flex items-center justify-between gap-4">
+              <label htmlFor="scoring-volume" className="text-[15px]">
+                Scoring sound
+              </label>
+              <span className="text-[14px] text-muted tabular-nums">
+                {value.scoring_volume === 0 ? 'Off' : `${value.scoring_volume}%`}
+              </span>
+            </div>
+            <p className="text-[14px] leading-[1.45] text-muted">
+              Music and cheers on the {screenKind(state)} while it shows each singer’s score.
+            </p>
+            <input
+              id="scoring-volume"
+              type="range"
+              min={0}
+              max={100}
+              step={10}
+              value={value.scoring_volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              className="mt-1.5 h-6 w-full accent-accent"
+            />
           </div>
-          <p className="text-[14px] leading-[1.45] text-muted">
-            Music and cheers on the {screenKind(state)} while it shows each singer’s score.
-          </p>
-          <input
-            id="scoring-volume"
-            type="range"
-            min={0}
-            max={100}
-            step={10}
-            value={value.scoring_volume}
-            onChange={(e) => changeVolume(Number(e.target.value))}
-            className="mt-1.5 h-6 w-full accent-accent"
-          />
-        </div>
+        )}
         <ButtonLink to={`${base}/invite/tv`} variant="secondary" icon={icons.monitorSettings}>
           {state.display_connected
             ? 'Switch display'

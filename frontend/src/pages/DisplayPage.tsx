@@ -731,11 +731,14 @@ function DisplayRoom({ session, armed, onArm, onEnd }: {
   const [song, setSong] = useState<QueueItem | null>(null)
   if (current && !scoring && (current.id !== song?.id || current.youtube_video_id !== song.youtube_video_id))
     setSong(current)
+  // The host can turn scoring off; a score already on screen goes with it.
+  const scoringEnabled = state.data?.room.scoring_enabled !== false
+  if (scoring && !scoringEnabled) setScoring(null)
   const [blocked, setBlocked] = useState(false)
   const endScoring = useCallback(() => setScoring(null), [])
   const onFinished = (itemId: number) => {
     setFinishedId(itemId)
-    if (song?.id === itemId) setScoring({ item: song, score: randomScore() })
+    if (scoringEnabled && song?.id === itemId) setScoring({ item: song, score: randomScore() })
   }
 
   // iPhone Home Screen mode can't go fullscreen for real, so the toggle turns the stage instead.

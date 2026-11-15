@@ -34,6 +34,7 @@ it('lets the host change room settings', function () {
             'allow_song_additions' => false,
             'guests_can_skip' => true,
             'show_side_strip' => false,
+            'scoring_enabled' => false,
             'scoring_volume' => 40,
         ])
         ->assertOk()
@@ -42,6 +43,7 @@ it('lets the host change room settings', function () {
         ->assertJsonPath('data.allow_song_additions', false)
         ->assertJsonPath('data.guests_can_skip', true)
         ->assertJsonPath('data.show_side_strip', false)
+        ->assertJsonPath('data.scoring_enabled', false)
         ->assertJsonPath('data.scoring_volume', 40);
 });
 

@@ -2,6 +2,8 @@
 
 Browser-based karaoke for multiple phones. The host creates a room on their phone, guests join by QR code or room code (no accounts, no app install), and a laptop connected to a TV plays YouTube karaoke videos. All devices sync in real time through a cloud backend, even when they're on different networks.
 
+![How Videokehan works: the host creates a room, a display (TV, laptop, tablet or phone) shows a QR code, and a guest joins and adds a song](docs/demo.gif)
+
 See [docs/architecture.md](docs/architecture.md) for the design.
 
 ```

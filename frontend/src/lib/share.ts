@@ -1,7 +1,10 @@
 import { useState } from 'react'
 
-/** Where people reach the person who runs Videokehan (footer, privacy policy). */
-export const CONTACT_EMAIL = 'raam221027@gmail.com'
+/**
+ * Where people reach the person who runs Videokehan (footer, privacy policy).
+ * Joined at runtime so the address never sits whole in the bundle for scrapers.
+ */
+export const CONTACT_EMAIL = ['support', 'videokehan.com'].join('@')
 
 const onLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
 
